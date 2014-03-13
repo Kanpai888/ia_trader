@@ -20,7 +20,7 @@
  * Author  : Joakim Eriksson, Niclas Finne, Sverker Janson
  * Created : 23 April, 2002
  * Updated : $Date: 2005/06/07 19:06:16 $
- *	     $Revision: 1.1 $
+ *       $Revision: 1.1 $
  * ---------------------------------------------------------
  * DummyAgent is a simplest possible agent for TAC. It uses
  * the TACAgent agent ware to interact with the TAC server.
@@ -148,59 +148,59 @@ public class DummyAgent extends AgentImpl {
     if (auctionCategory == TACAgent.CAT_HOTEL) {
       int alloc = agent.getAllocation(auction);
       if (alloc > 0 && quote.hasHQW(agent.getBid(auction)) &&
-	  quote.getHQW() < alloc) {
-	Bid bid = new Bid(auction);
-	// Can not own anything in hotel auctions...
-	prices[auction] = quote.getAskPrice() + 50;
-	bid.addBidPoint(alloc, prices[auction]);
-	if (DEBUG) {
-	  log.finest("submitting bid with alloc="
-		     + agent.getAllocation(auction)
-		     + " own=" + agent.getOwn(auction));
-	}
-	agent.submitBid(bid);
+    quote.getHQW() < alloc) {
+  Bid bid = new Bid(auction);
+  // Can not own anything in hotel auctions...
+  prices[auction] = quote.getAskPrice() + 50;
+  bid.addBidPoint(alloc, prices[auction]);
+  if (DEBUG) {
+    log.finest("submitting bid with alloc="
+         + agent.getAllocation(auction)
+         + " own=" + agent.getOwn(auction));
+  }
+  agent.submitBid(bid);
       }
     } else if (auctionCategory == TACAgent.CAT_ENTERTAINMENT) {
       int alloc = agent.getAllocation(auction) - agent.getOwn(auction);
       if (alloc != 0) {
-	Bid bid = new Bid(auction);
-	if (alloc < 0)
-	  prices[auction] = 200f - (agent.getGameTime() * 120f) / 720000;
-	else
-	  prices[auction] = 50f + (agent.getGameTime() * 100f) / 720000;
-	bid.addBidPoint(alloc, prices[auction]);
-	if (DEBUG) {
-	  log.finest("submitting bid with alloc="
-		     + agent.getAllocation(auction)
-		     + " own=" + agent.getOwn(auction));
-	}
-	agent.submitBid(bid);
+  Bid bid = new Bid(auction);
+  if (alloc < 0)
+    prices[auction] = 200f - (agent.getGameTime() * 120f) / 720000;
+  else
+    prices[auction] = 50f + (agent.getGameTime() * 100f) / 720000;
+  bid.addBidPoint(alloc, prices[auction]);
+  if (DEBUG) {
+    log.finest("submitting bid with alloc="
+         + agent.getAllocation(auction)
+         + " own=" + agent.getOwn(auction));
+  }
+  agent.submitBid(bid);
       }
     }
   }
 
   public void quoteUpdated(int auctionCategory) {
     log.fine("All quotes for "
-	     + agent.auctionCategoryToString(auctionCategory)
-	     + " has been updated");
+       + agent.auctionCategoryToString(auctionCategory)
+       + " has been updated");
   }
 
   public void bidUpdated(Bid bid) {
     log.fine("Bid Updated: id=" + bid.getID() + " auction="
-	     + bid.getAuction() + " state="
-	     + bid.getProcessingStateAsString());
+       + bid.getAuction() + " state="
+       + bid.getProcessingStateAsString());
     log.fine("       Hash: " + bid.getBidHash());
   }
 
   public void bidRejected(Bid bid) {
     log.warning("Bid Rejected: " + bid.getID());
     log.warning("      Reason: " + bid.getRejectReason()
-		+ " (" + bid.getRejectReasonAsString() + ')');
+    + " (" + bid.getRejectReasonAsString() + ')');
   }
 
   public void bidError(Bid bid, int status) {
     log.warning("Bid Error in auction " + bid.getAuction() + ": " + status
-		+ " (" + agent.commandStatusToString(status) + ')');
+    + " (" + agent.commandStatusToString(status) + ')');
   }
 
   public void gameStarted() {
@@ -224,36 +224,36 @@ public class DummyAgent extends AgentImpl {
       float price = -1f;
       switch (agent.getAuctionCategory(i)) {
       case TACAgent.CAT_FLIGHT:
-	if (alloc > 0) {
-	  price = 1000;
-	}
-	break;
+  if (alloc > 0) {
+    price = 1000;
+  }
+  break;
       case TACAgent.CAT_HOTEL:
-	if (alloc > 0) {
-	  price = 200;
-	  prices[i] = 200f;
-	}
-	break;
+  if (alloc > 0) {
+    price = 200;
+    prices[i] = 200f;
+  }
+  break;
       case TACAgent.CAT_ENTERTAINMENT:
-	if (alloc < 0) {
-	  price = 200;
-	  prices[i] = 200f;
-	} else if (alloc > 0) {
-	  price = 50;
-	  prices[i] = 50f;
-	}
-	break;
+  if (alloc < 0) {
+    price = 200;
+    prices[i] = 200f;
+  } else if (alloc > 0) {
+    price = 50;
+    prices[i] = 50f;
+  }
+  break;
       default:
-	break;
+  break;
       }
       if (price > 0) {
-	Bid bid = new Bid(i);
-	bid.addBidPoint(alloc, price);
-	if (DEBUG) {
-	  log.finest("submitting bid with alloc=" + agent.getAllocation(i)
-		     + " own=" + agent.getOwn(i));
-	}
-	agent.submitBid(bid);
+  Bid bid = new Bid(i);
+  bid.addBidPoint(alloc, price);
+  if (DEBUG) {
+    log.finest("submitting bid with alloc=" + agent.getAllocation(i)
+         + " own=" + agent.getOwn(i));
+  }
+  agent.submitBid(bid);
       }
     }
   }
@@ -268,31 +268,31 @@ public class DummyAgent extends AgentImpl {
       // Get the flight preferences auction and remember that we are
       // going to buy tickets for these days. (inflight=1, outflight=0)
       int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT,
-					TACAgent.TYPE_INFLIGHT, inFlight);
+          TACAgent.TYPE_INFLIGHT, inFlight);
       agent.setAllocation(auction, agent.getAllocation(auction) + 1);
       auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT,
-				    TACAgent.TYPE_OUTFLIGHT, outFlight);
+            TACAgent.TYPE_OUTFLIGHT, outFlight);
       agent.setAllocation(auction, agent.getAllocation(auction) + 1);
 
       // if the hotel value is greater than 70 we will select the
       // expensive hotel (type = 1)
       if (hotel > 70) {
-	type = TACAgent.TYPE_GOOD_HOTEL;
+  type = TACAgent.TYPE_GOOD_HOTEL;
       } else {
-	type = TACAgent.TYPE_CHEAP_HOTEL;
+  type = TACAgent.TYPE_CHEAP_HOTEL;
       }
       // allocate a hotel night for each day that the agent stays
       for (int d = inFlight; d < outFlight; d++) {
-	auction = agent.getAuctionFor(TACAgent.CAT_HOTEL, type, d);
-	log.finer("Adding hotel for day: " + d + " on " + auction);
-	agent.setAllocation(auction, agent.getAllocation(auction) + 1);
+  auction = agent.getAuctionFor(TACAgent.CAT_HOTEL, type, d);
+  log.finer("Adding hotel for day: " + d + " on " + auction);
+  agent.setAllocation(auction, agent.getAllocation(auction) + 1);
       }
 
       int eType = -1;
       while((eType = nextEntType(i, eType)) > 0) {
-	auction = bestEntDay(inFlight, outFlight, eType);
-	log.finer("Adding entertainment " + eType + " on " + auction);
-	agent.setAllocation(auction, agent.getAllocation(auction) + 1);
+  auction = bestEntDay(inFlight, outFlight, eType);
+  log.finer("Adding entertainment " + eType + " on " + auction);
+  agent.setAllocation(auction, agent.getAllocation(auction) + 1);
       }
     }
   }
@@ -300,14 +300,14 @@ public class DummyAgent extends AgentImpl {
   private int bestEntDay(int inFlight, int outFlight, int type) {
     for (int i = inFlight; i < outFlight; i++) {
       int auction = agent.getAuctionFor(TACAgent.CAT_ENTERTAINMENT,
-					type, i);
+          type, i);
       if (agent.getAllocation(auction) < agent.getOwn(auction)) {
-	return auction;
+  return auction;
       }
     }
     // If no left, just take the first...
     return agent.getAuctionFor(TACAgent.CAT_ENTERTAINMENT,
-			       type, inFlight);
+             type, inFlight);
   }
 
   private int nextEntType(int client, int lastType) {
