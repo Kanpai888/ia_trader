@@ -146,7 +146,7 @@ public class DummyAgent extends AgentImpl {
     int auction = quote.getAuction();
     int auctionCategory = agent.getAuctionCategory(auction);
     if (auctionCategory == TACAgent.CAT_HOTEL) {
-      int alloc = agent.getAllocation(auction);
+      int alloc = agent.getAllocation(auction); //Allocation is number of items wanted from this auction
       if (alloc > 0 && quote.hasHQW(agent.getBid(auction)) && quote.getHQW() < alloc) {
         Bid bid = new Bid(auction);
         // Can not own anything in hotel auctions...
@@ -161,10 +161,11 @@ public class DummyAgent extends AgentImpl {
       int alloc = agent.getAllocation(auction) - agent.getOwn(auction);
       if (alloc != 0) {
         Bid bid = new Bid(auction);
-        if (alloc < 0)
-        prices[auction] = 200f - (agent.getGameTime() * 120f) / 720000;
-        else
-        prices[auction] = 50f + (agent.getGameTime() * 100f) / 720000;
+        if (alloc < 0) {
+          prices[auction] = 200f - (agent.getGameTime() * 120f) / 720000;
+        } else {
+          prices[auction] = 50f + (agent.getGameTime() * 100f) / 720000;
+        }
         bid.addBidPoint(alloc, prices[auction]);
         if (DEBUG) {
           log.finest("submitting bid with alloc=" + agent.getAllocation(auction) + " own=" + agent.getOwn(auction));
