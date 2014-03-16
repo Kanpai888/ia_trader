@@ -109,7 +109,6 @@
  *  - new information about the quotes on all auctions for the auction
  *    category has arrived (quotes for a specific type of auctions are
  *    often requested at once).
-
  * auctionClosed(int auction)
  *  - the auction with id "auction" has closed
  *
@@ -135,13 +134,15 @@ public class DummyAgent extends AgentImpl {
     Logger.getLogger(DummyAgent.class.getName());
 
   private static final boolean DEBUG = false;
-
+    
   private float[] prices;
 
   protected void init(ArgEnumerator args) {
     prices = new float[agent.getAuctionNo()];
   }
 
+  // New information about the quotes on the auction (quote.getAuction())
+  // has arrived
   public void quoteUpdated(Quote quote) {
     int auction = quote.getAuction();
     int auctionCategory = agent.getAuctionCategory(auction);
@@ -176,24 +177,33 @@ public class DummyAgent extends AgentImpl {
     }
   }
 
+  // New information about the quotes on all auctions for the auction
+  // category has arrived (quotes for a specific type of auctions are
+  // often requested at once).
   public void quoteUpdated(int auctionCategory) {
     log.fine("All quotes for " + agent.auctionCategoryToString(auctionCategory) + " has been updated");
   }
 
+  // There are TACAgent have received an answer on a bid query/submission
+  // (new information about the bid is available)
   public void bidUpdated(Bid bid) {
     log.fine("Bid Updated: id=" + bid.getID() + " auction=" + bid.getAuction() + " state=" + bid.getProcessingStateAsString());
     log.fine("       Hash: " + bid.getBidHash());
   }
 
+  // The bid has been rejected (reason is bid.getRejectReason())
   public void bidRejected(Bid bid) {
     log.warning("Bid Rejected: " + bid.getID());
     log.warning("      Reason: " + bid.getRejectReason() + " (" + bid.getRejectReasonAsString() + ')');
   }
 
+  // The bid contained errors (error represent error status - commandStatus)
   public void bidError(Bid bid, int status) {
     log.warning("Bid Error in auction " + bid.getAuction() + ": " + status + " (" + agent.commandStatusToString(status) + ')');
   }
 
+  // A TAC game has started, and all information about the
+  // game is available (preferences etc).
   public void gameStarted() {
     log.fine("Game " + agent.getGameID() + " started!");
 
@@ -201,14 +211,17 @@ public class DummyAgent extends AgentImpl {
     sendBids();
   }
 
+  // The current game has ended
   public void gameStopped() {
     log.fine("Game Stopped!");
   }
 
+  // The auction with id "auction" has closed
   public void auctionClosed(int auction) {
     log.fine("*** Auction " + auction + " closed!");
   }
 
+  // Sends initial bids
   private void sendBids() {
     for (int i = 0, n = agent.getAuctionNo(); i < n; i++) {
       int alloc = agent.getAllocation(i) - agent.getOwn(i);
