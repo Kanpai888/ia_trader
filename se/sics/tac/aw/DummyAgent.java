@@ -227,28 +227,28 @@ public class DummyAgent extends AgentImpl {
       int alloc = agent.getAllocation(i) - agent.getOwn(i);
       float price = -1f;
       switch (agent.getAuctionCategory(i)) {
-      case TACAgent.CAT_FLIGHT:
-        if (alloc > 0) {
-          price = 1000;
-        }
-      break;
-      case TACAgent.CAT_HOTEL:
-        if (alloc > 0) {
-          price = 200;
-          prices[i] = 200f;
-        }
-      break;
-      case TACAgent.CAT_ENTERTAINMENT:
-        if (alloc < 0) {
-          price = 200;
-          prices[i] = 200f;
-        } else if (alloc > 0) {
-          price = 50;
-          prices[i] = 50f;
-        }
-      break;
-      default:
-      break;
+        case TACAgent.CAT_FLIGHT:
+          if (alloc > 0) {
+            price = 1000;
+          }
+          break;
+        case TACAgent.CAT_HOTEL:
+          if (alloc > 0) {
+            price = 200;
+            prices[i] = 200f;
+          }
+          break;
+        case TACAgent.CAT_ENTERTAINMENT:
+          if (alloc < 0) {
+            price = 200;
+            prices[i] = 200f;
+          } else if (alloc > 0) {
+            price = 50;
+            prices[i] = 50f;
+          }
+          break;
+        default:
+          break;
       }
       if (price > 0) {
         Bid bid = new Bid(i);
@@ -261,7 +261,10 @@ public class DummyAgent extends AgentImpl {
     }
   }
 
+  // Sets the 'allocation' to the required flights, hotels, and entertainment.
+  // An allocation is a item that we need to provide to the client.
   private void calculateAllocation() {
+    // Loop through for each of the 8 clients
     for (int i = 0; i < 8; i++) {
       int inFlight = agent.getClientPreference(i, TACAgent.ARRIVAL);
       int outFlight = agent.getClientPreference(i, TACAgent.DEPARTURE);
@@ -275,20 +278,21 @@ public class DummyAgent extends AgentImpl {
       auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
       agent.setAllocation(auction, agent.getAllocation(auction) + 1);
 
-      // if the hotel value is greater than 70 we will select the
+      // If the client's hotel_bonus is greater than 70 we will select the
       // expensive hotel (type = 1)
       if (hotel > 70) {
         type = TACAgent.TYPE_GOOD_HOTEL;
       } else {
         type = TACAgent.TYPE_CHEAP_HOTEL;
       }
-      // allocate a hotel night for each day that the agent stays
+      // Allocate a hotel night for each day that the client stays
       for (int d = inFlight; d < outFlight; d++) {
         auction = agent.getAuctionFor(TACAgent.CAT_HOTEL, type, d);
         log.finer("Adding hotel for day: " + d + " on " + auction);
         agent.setAllocation(auction, agent.getAllocation(auction) + 1);
       }
 
+      // Allocate a different entertainment for each day the client stays
       int eType = -1;
       while((eType = nextEntType(i, eType)) > 0) {
         auction = bestEntDay(inFlight, outFlight, eType);
@@ -304,7 +308,7 @@ public class DummyAgent extends AgentImpl {
       if (agent.getAllocation(auction) < agent.getOwn(auction)) {
         return auction;
       }
-    }
+    }agent.getCl
     // If no left, just take the first...
     return agent.getAuctionFor(TACAgent.CAT_ENTERTAINMENT, type, inFlight);
   }
