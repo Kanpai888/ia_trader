@@ -131,7 +131,7 @@ import java.util.logging.*;
 public class Phobos extends AgentImpl {
 
   private static final Logger log =
-    Logger.getLogger(DummyAgent.class.getName());
+    Logger.getLogger(Phobos.class.getName());
 
   private static final boolean DEBUG = false;
 
