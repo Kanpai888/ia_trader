@@ -135,6 +135,12 @@ public class Phobos extends AgentImpl {
 
   private static final boolean DEBUG = false;
 
+  // Min bonus threshold is $23.5 ($50 hotel bonus / 4 days)
+  // Max bonus threshold is $150 ($150 hotel bonus / 1 day)
+  // At thresholds above $37.5, the agent will never choose TT for a client that wants to 
+  // stay for 4 days ($150 hotel bonus / 4 days = $37.5)
+  private static final int HOTEL_BONUS_THRESHOLD = 30;
+
   private float[] prices;
 
   protected void init(ArgEnumerator args) {
@@ -268,7 +274,7 @@ public class Phobos extends AgentImpl {
     for (int i = 0; i < 8; i++) {
       int inFlight = agent.getClientPreference(i, TACAgent.ARRIVAL);
       int outFlight = agent.getClientPreference(i, TACAgent.DEPARTURE);
-      int hotel = agent.getClientPreference(i, TACAgent.HOTEL_VALUE);
+      int hotelBonus = agent.getClientPreference(i, TACAgent.HOTEL_VALUE);
       int type;
 
       // Get the flight preferences auction and remember that we are
@@ -278,9 +284,10 @@ public class Phobos extends AgentImpl {
       auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
       agent.setAllocation(auction, agent.getAllocation(auction) + 1);
 
-      // If the client's hotel_bonus is greater than 70 we will select the
+      // Check the value of bonus for each day of stay and compare to a threshold
       // expensive hotel (type = 1)
-      if (hotel > 70) {
+      int stayDuration = inFlight - outFlight;
+      if (hotelBonus / stayDuration > HOTEL_BONUS_THRESHOLD) {
         type = TACAgent.TYPE_GOOD_HOTEL;
       } else {
         type = TACAgent.TYPE_CHEAP_HOTEL;
