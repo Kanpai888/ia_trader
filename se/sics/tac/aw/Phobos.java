@@ -129,14 +129,37 @@ import se.sics.tac.util.ArgEnumerator;
 import java.util.logging.*;
 
 public class Phobos extends AgentImpl {
-
+  
+  private class ClientPreference {
+    
+    private int client;
+    
+    public ClientPreference(int clientRef) {
+      client = clientRef;
+    }
+    
+    public int getE1() {
+      return agent.getClientPreference(client, TACAgent.E1);
+    }
+    
+    public int getE2() {
+      return agent.getClientPreference(client, TACAgent.E2);
+    }
+    
+    public int getE3() {
+      return agent.getClientPreference(client, TACAgent.E3);
+    }
+  }
+  
   private static final Logger log =
     Logger.getLogger(Phobos.class.getName());
 
   private static final boolean DEBUG = false;
 
   private float[] prices;
-
+  
+  private ClientPreference[] clientPreferences;
+  
   protected void init(ArgEnumerator args) {
     prices = new float[agent.getAuctionNo()];
   }
@@ -160,6 +183,7 @@ public class Phobos extends AgentImpl {
         agent.submitBid(bid);
       }
     } else if (auctionCategory == TACAgent.CAT_ENTERTAINMENT) {
+      //Set alloc to be the number of tickets needed
       int alloc = agent.getAllocation(auction) - agent.getOwn(auction);
       if (alloc != 0) {
         Bid bid = new Bid(auction);
