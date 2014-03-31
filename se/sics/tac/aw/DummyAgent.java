@@ -134,7 +134,7 @@ public class DummyAgent extends AgentImpl {
     Logger.getLogger(DummyAgent.class.getName());
 
   private static final boolean DEBUG = false;
-    
+
   private float[] prices;
 
   protected void init(ArgEnumerator args) {
@@ -308,7 +308,7 @@ public class DummyAgent extends AgentImpl {
       if (agent.getAllocation(auction) < agent.getOwn(auction)) {
         return auction;
       }
-    }agent.getCl
+    }
     // If no left, just take the first...
     return agent.getAuctionFor(TACAgent.CAT_ENTERTAINMENT, type, inFlight);
   }
