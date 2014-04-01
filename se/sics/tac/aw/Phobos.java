@@ -261,7 +261,7 @@ public class Phobos extends AgentImpl {
     log.fine("Update\tDay 1\tDay 2\tDay 3\tDay 4");
 
     for (int i = 0; i < 54; ++i) {
-      log.fine(i + "\t" + flightPrices[0][i] + "\t" + flightPrices[1][i] + "\t" + flightPrices[2][i] + "\t" + flightPrices[3][i]);
+      log.fine(i + " \t" + flightPrices[0][i] + "\t" + flightPrices[1][i] + "\t" + flightPrices[2][i] + "\t" + flightPrices[3][i]);
     }
 
     // Reset flight logging vars
