@@ -286,7 +286,7 @@ public class Phobos extends AgentImpl {
 
       // Check the value of bonus for each day of stay and compare to a threshold
       // expensive hotel (type = 1)
-      int stayDuration = inFlight - outFlight;
+      int stayDuration = outFlight - inFlight;
       if (hotelBonus / stayDuration > HOTEL_BONUS_THRESHOLD) {
         type = TACAgent.TYPE_GOOD_HOTEL;
       } else {
