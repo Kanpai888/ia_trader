@@ -127,11 +127,13 @@
 package se.sics.tac.aw;
 import se.sics.tac.util.ArgEnumerator;
 import java.util.logging.*;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 public class Phobos extends AgentImpl {
 
   private static final Logger log =
-    Logger.getLogger(DummyAgent.class.getName());
+    Logger.getLogger(Phobos.class.getName());
 
   private static final boolean DEBUG = false;
 
@@ -143,8 +145,21 @@ public class Phobos extends AgentImpl {
 
   private float[] prices;
 
+  // HashMap used to store price tracking arrays for auctions
+  private HashMap<Integer, ArrayList<Float>> historicalPrices;
+
+  // Vars used to store return flight price movements
+  private float[][] flightPrices;
+  private int flightPriceCounter;
+  private int flightPriceDay;
+
   protected void init(ArgEnumerator args) {
     prices = new float[agent.getAuctionNo()];
+    historicalPrices = new HashMap<Integer, ArrayList<Float>>();
+
+    flightPrices = new float[4][54];
+    flightPriceCounter = 0;
+    flightPriceDay = 0;
   }
 
   // New information about the quotes on the auction (quote.getAuction())
@@ -152,6 +167,42 @@ public class Phobos extends AgentImpl {
   public void quoteUpdated(Quote quote) {
     int auction = quote.getAuction();
     int auctionCategory = agent.getAuctionCategory(auction);
+    int auctionType = agent.getAuctionType(auction);
+    if (auctionCategory == TACAgent.CAT_FLIGHT && auctionType == TACAgent.TYPE_OUTFLIGHT) {
+      log.fine("Outflight price set to " + quote.getAskPrice());
+      int alloc = agent.getAllocation(auction) - agent.getOwn(auction);
+
+      // Work out the price trend using the price from the last round
+      ArrayList<Float> priceHistory = historicalPrices.get(auction);
+      // float trend = quote.getAskPrice() - priceHistory.get(flightPriceCounter - 1);
+
+      // We want to track the changes in price for the return flights we want
+      if (alloc > 0) {
+        priceHistory = historicalPrices.get(auction);
+        priceHistory.add(quote.getAskPrice());
+
+        // Do the algorithms here that check whether to bid or not
+        // if (trend > 0) { // The price is rising
+          
+        // }
+      }
+
+      // Track the prices for all the flights anyway for checking in the log
+      if (flightPriceDay == 4) {
+        flightPriceDay = 0;
+        flightPriceCounter++;
+      }
+      flightPrices[flightPriceDay++][flightPriceCounter] = quote.getAskPrice();
+
+      // Just a basic implementation to ensure the agent makes valid trips while
+      // working on real impl.
+      // If 20 seconds are left and the flights still aren't bought, buy them
+      if (agent.getGameTimeLeft() < 20000 && alloc > 0) {
+        Bid bid = new Bid(auction);
+        bid.addBidPoint(alloc, 1000);
+        agent.submitBid(bid);
+      }
+    }
     if (auctionCategory == TACAgent.CAT_HOTEL) {
       int alloc = agent.getAllocation(auction); // Allocation is number of items wanted from this auction
       /* If there are any to be won, and the Hypothetical Quantity Won is less than the amount needed */
@@ -161,7 +212,7 @@ public class Phobos extends AgentImpl {
         prices[auction] = quote.getAskPrice() + 50;
         bid.addBidPoint(alloc, prices[auction]);
         if (DEBUG) {
-          log.finest("submitting bid with alloc=" + agent.getAllocation(auction) + " own=" + agent.getOwn(auction));
+          // log.finest("submitting bid with alloc=" + agent.getAllocation(auction) + " own=" + agent.getOwn(auction));
         }
         agent.submitBid(bid);
       }
@@ -176,7 +227,7 @@ public class Phobos extends AgentImpl {
         }
         bid.addBidPoint(alloc, prices[auction]);
         if (DEBUG) {
-          log.finest("submitting bid with alloc=" + agent.getAllocation(auction) + " own=" + agent.getOwn(auction));
+          // log.finest("submitting bid with alloc=" + agent.getAllocation(auction) + " own=" + agent.getOwn(auction));
         }
         agent.submitBid(bid);
       }
@@ -193,8 +244,8 @@ public class Phobos extends AgentImpl {
   // There are TACAgent have received an answer on a bid query/submission
   // (new information about the bid is available)
   public void bidUpdated(Bid bid) {
-    log.fine("Bid Updated: id=" + bid.getID() + " auction=" + bid.getAuction() + " state=" + bid.getProcessingStateAsString());
-    log.fine("       Hash: " + bid.getBidHash());
+    log.fine("Bid Updated: id=" + bid.getID() + " auction=" + bid.getAuction() + " state=" + bid.getProcessingStateAsString() + " stateID=" + bid.getProcessingState());
+    // log.fine("       Hash: " + bid.getBidHash());
   }
 
   // The bid has been rejected (reason is bid.getRejectReason())
@@ -219,6 +270,18 @@ public class Phobos extends AgentImpl {
 
   // The current game has ended
   public void gameStopped() {
+    // Output the list of flight prices
+    log.fine("**************** Outputting Flight Prices ****************");
+    log.fine("Update\tDay 1\tDay 2\tDay 3\tDay 4");
+
+    for (int i = 0; i < 54; ++i) {
+      log.fine(i + " \t" + flightPrices[0][i] + "\t" + flightPrices[1][i] + "\t" + flightPrices[2][i] + "\t" + flightPrices[3][i]);
+    }
+
+    // Reset flight logging vars
+    flightPriceCounter = 0;
+    flightPriceDay = 0;
+
     log.fine("Game Stopped!");
   }
 
@@ -234,8 +297,15 @@ public class Phobos extends AgentImpl {
       float price = -1f;
       switch (agent.getAuctionCategory(i)) {
         case TACAgent.CAT_FLIGHT:
+          /*
           if (alloc > 0) {
             price = 1000;
+          }
+          */
+          if (agent.getAuctionType(i) == TACAgent.TYPE_INFLIGHT) { // Only bid on inflights first
+            if (alloc > 0) {
+              price = 1000;
+            }
           }
           break;
         case TACAgent.CAT_HOTEL:
@@ -283,6 +353,7 @@ public class Phobos extends AgentImpl {
       agent.setAllocation(auction, agent.getAllocation(auction) + 1);
       auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
       agent.setAllocation(auction, agent.getAllocation(auction) + 1);
+      historicalPrices.put(auction, new ArrayList<Float>());
 
       // Check the value of bonus for each day of stay and compare to a threshold
       // expensive hotel (type = 1)
@@ -335,12 +406,12 @@ public class Phobos extends AgentImpl {
     return -1;
   }
 
-  private void clientHotelFufilled(int clientNo){
+  private void clientHotelFufilled(int clientNo) {
 
   }
 
   // day is a value from 1 to 4
-  private void clientTripShortend(int clientNo, int day){
+  private void clientTripShortend(int clientNo, int day) {
 
   }
 
