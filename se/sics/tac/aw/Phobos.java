@@ -144,6 +144,7 @@ public class Phobos extends AgentImpl {
   private static final int HOTEL_BONUS_THRESHOLD = 30;
 
   private float[] prices;
+  private float[] previousPrices;
 
   // Array to show the difference between the current and last price of auctions
   private float[] trends;
@@ -159,6 +160,7 @@ public class Phobos extends AgentImpl {
 
   protected void init(ArgEnumerator args) {
     prices = new float[agent.getAuctionNo()];
+    previousPrices = new float[agent.getAuctionNo()];
     trends = new float[agent.getAuctionNo()];
     buyFlights = new HashMap<Integer, Integer>();
 
@@ -173,13 +175,36 @@ public class Phobos extends AgentImpl {
     int auction = quote.getAuction();
     int auctionCategory = agent.getAuctionCategory(auction);
     int auctionType = agent.getAuctionType(auction);
-    if (auctionCategory == TACAgent.CAT_FLIGHT && auctionType == TACAgent.TYPE_OUTFLIGHT) {
-      
+    if (auctionCategory == TACAgent.CAT_FLIGHT && auctionType == TACAgent.TYPE_INFLIGHT) {
       int alloc = agent.getAllocation(auction) - agent.getOwn(auction);
       // Work out the price trend using the price from the last round
       // If trends[auction] is negative, price has gone *DOWN*
-      // if it is positive, price has gone *UP*
-      trends[auction] = quote.getAskPrice() - trends[auction];
+      // if it is positive, price has gone *UP*      
+      trends[auction] = quote.getAskPrice() - previousPrices[auction];
+      previousPrices[auction] = quote.getAskPrice();
+
+      if (alloc > 0 && trends[auction] > 0 && agent.getGameTime() > 15000) {
+        // Price is going up after initial set, so buy
+        Bid bid = new Bid(auction);
+        bid.addBidPoint(alloc, 1000);
+        agent.submitBid(bid);
+        log.fine("*** Submitted bid for inflight at price " + quote.getAskPrice() + 
+          " with trend " + trends[auction]);
+      }
+
+      // Failsafe, in case the price has never gone up, buy with 20 seconds left
+      if (agent.getGameTimeLeft() < 20000 && alloc > 0) {
+        Bid bid = new Bid(auction);
+        bid.addBidPoint(alloc, 1000);
+        agent.submitBid(bid);
+      }
+    }
+
+    if (auctionCategory == TACAgent.CAT_FLIGHT && auctionType == TACAgent.TYPE_OUTFLIGHT) {
+      
+      int alloc = agent.getAllocation(auction) - agent.getOwn(auction);
+      trends[auction] = quote.getAskPrice() - previousPrices[auction];
+      previousPrices[auction] = quote.getAskPrice();
 
       if (alloc > 0) { // If we need this flight
         if (trends[auction] > 0 && buyFlights.get(auction) > 0) { 
@@ -308,10 +333,12 @@ public class Phobos extends AgentImpl {
             price = 1000;
           }
           */
-          if (agent.getAuctionType(i) == TACAgent.TYPE_INFLIGHT) { // Only bid on inflights first
+          if (agent.getAuctionType(i) == TACAgent.TYPE_INFLIGHT) {
+            /*
             if (alloc > 0) {
               price = 1000;
             }
+            */
           }
           break;
         case TACAgent.CAT_HOTEL:
