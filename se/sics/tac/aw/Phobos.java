@@ -406,12 +406,12 @@ public class Phobos extends AgentImpl {
     return -1;
   }
 
-  private void clientHotelFufilled(int clientNo){
+  private void clientHotelFufilled(int clientNo) {
 
   }
 
   // day is a value from 1 to 4
-  private void clientTripShortend(int clientNo, int day){
+  private void clientTripShortend(int clientNo, int day) {
 
   }
 
