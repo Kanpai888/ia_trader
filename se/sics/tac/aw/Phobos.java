@@ -144,9 +144,14 @@ public class Phobos extends AgentImpl {
   private static final int HOTEL_BONUS_THRESHOLD = 30;
 
   private float[] prices;
+  private float[] previousPrices;
 
-  // HashMap used to store price tracking arrays for auctions
-  private HashMap<Integer, ArrayList<Float>> historicalPrices;
+  // Array to show the difference between the current and last price of auctions
+  private float[] trends;
+
+  // HashMap stores auctions of flights that should be bought when price is low
+  // and quantities of them
+  private HashMap<Integer, Integer> buyFlights;
 
   // Vars used to store return flight price movements
   private float[][] flightPrices;
@@ -155,7 +160,9 @@ public class Phobos extends AgentImpl {
 
   protected void init(ArgEnumerator args) {
     prices = new float[agent.getAuctionNo()];
-    historicalPrices = new HashMap<Integer, ArrayList<Float>>();
+    previousPrices = new float[agent.getAuctionNo()];
+    trends = new float[agent.getAuctionNo()];
+    buyFlights = new HashMap<Integer, Integer>();
 
     flightPrices = new float[4][54];
     flightPriceCounter = 0;
@@ -168,23 +175,47 @@ public class Phobos extends AgentImpl {
     int auction = quote.getAuction();
     int auctionCategory = agent.getAuctionCategory(auction);
     int auctionType = agent.getAuctionType(auction);
-    if (auctionCategory == TACAgent.CAT_FLIGHT && auctionType == TACAgent.TYPE_OUTFLIGHT) {
-      log.fine("Outflight price set to " + quote.getAskPrice());
+    if (auctionCategory == TACAgent.CAT_FLIGHT && auctionType == TACAgent.TYPE_INFLIGHT) {
       int alloc = agent.getAllocation(auction) - agent.getOwn(auction);
-
       // Work out the price trend using the price from the last round
-      ArrayList<Float> priceHistory = historicalPrices.get(auction);
-      // float trend = quote.getAskPrice() - priceHistory.get(flightPriceCounter - 1);
+      // If trends[auction] is negative, price has gone *DOWN*
+      // if it is positive, price has gone *UP*      
+      trends[auction] = quote.getAskPrice() - previousPrices[auction];
+      previousPrices[auction] = quote.getAskPrice();
 
-      // We want to track the changes in price for the return flights we want
-      if (alloc > 0) {
-        priceHistory = historicalPrices.get(auction);
-        priceHistory.add(quote.getAskPrice());
+      if (alloc > 0 && trends[auction] > 0 && agent.getGameTime() > 15000) {
+        // Price is going up after initial set, so buy
+        Bid bid = new Bid(auction);
+        bid.addBidPoint(alloc, 1000);
+        agent.submitBid(bid);
+        log.fine("*** Submitted bid for inflight at price " + quote.getAskPrice() + 
+          " with trend " + trends[auction]);
+      }
 
-        // Do the algorithms here that check whether to bid or not
-        // if (trend > 0) { // The price is rising
-          
-        // }
+      // Failsafe, in case the price has never gone up, buy with 20 seconds left
+      if (agent.getGameTimeLeft() < 20000 && alloc > 0) {
+        Bid bid = new Bid(auction);
+        bid.addBidPoint(alloc, 1000);
+        agent.submitBid(bid);
+      }
+    }
+
+    if (auctionCategory == TACAgent.CAT_FLIGHT && auctionType == TACAgent.TYPE_OUTFLIGHT) {
+      
+      int alloc = agent.getAllocation(auction) - agent.getOwn(auction);
+      trends[auction] = quote.getAskPrice() - previousPrices[auction];
+      previousPrices[auction] = quote.getAskPrice();
+
+      if (alloc > 0) { // If we need this flight
+        if (trends[auction] > 0 && buyFlights.get(auction) > 0) { 
+          // The price is rising and the auction is in the buyFlights HashMap
+          // so create a bid for them
+          Bid bid = new Bid(auction);
+          bid.addBidPoint(buyFlights.get(auction), 1000);
+          agent.submitBid(bid);
+
+          buyFlights.put(auction, 0); // Reset buyFlights HashMap for that auction
+        }
       }
 
       // Track the prices for all the flights anyway for checking in the log
@@ -302,10 +333,12 @@ public class Phobos extends AgentImpl {
             price = 1000;
           }
           */
-          if (agent.getAuctionType(i) == TACAgent.TYPE_INFLIGHT) { // Only bid on inflights first
+          if (agent.getAuctionType(i) == TACAgent.TYPE_INFLIGHT) {
+            /*
             if (alloc > 0) {
               price = 1000;
             }
+            */
           }
           break;
         case TACAgent.CAT_HOTEL:
@@ -353,7 +386,8 @@ public class Phobos extends AgentImpl {
       agent.setAllocation(auction, agent.getAllocation(auction) + 1);
       auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
       agent.setAllocation(auction, agent.getAllocation(auction) + 1);
-      historicalPrices.put(auction, new ArrayList<Float>());
+
+      buyFlights.put(auction, 0);
 
       // Check the value of bonus for each day of stay and compare to a threshold
       // expensive hotel (type = 1)
@@ -406,13 +440,47 @@ public class Phobos extends AgentImpl {
     return -1;
   }
 
-  private void clientHotelFufilled(int clientNo) {
+  private void clientHotelFulfilled(int clientNo) {
+    int outFlight = agent.getClientPreference(clientNo, TACAgent.DEPARTURE);
+    int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
 
+    // Buy the flight if the price is currently rising, otherwise wait and
+    // monitor as usual
+    if (trends[auction] > 0) { // The price is going up
+      Bid bid = new Bid(auction);
+      bid.addBidPoint(1, 1000);
+      agent.submitBid(bid);
+    } else {
+      // The price is going down, so add it to the HashMap and buy at
+      // lowest price
+      buyFlights.put(auction, buyFlights.get(auction) + 1);
+    }
   }
 
   // day is a value from 1 to 4
   private void clientTripShortend(int clientNo, int day) {
+    // Change the allocation table
+    int outFlight = agent.getClientPreference(clientNo, TACAgent.DEPARTURE);
+    int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
+    agent.setAllocation(auction, agent.getAllocation(auction) - 1);
+    auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, day);
+    agent.setAllocation(auction, agent.getAllocation(auction) + 1);
 
+    // Buy the flight if the price is currently rising, otherwise wait and
+    // monitor as usual
+    if (trends[auction] > 0) { // The price is going up
+      Bid bid = new Bid(auction);
+      bid.addBidPoint(1, 1000);
+      agent.submitBid(bid);
+    } else {
+      // The price is going down, so add it to the HashMap and buy at
+      // lowest price
+      if (buyFlights.get(auction) != null) {
+        buyFlights.put(auction, buyFlights.get(auction) + 1);
+      } else {
+        buyFlights.put(auction, 1);
+      }
+    }
   }
 
 
