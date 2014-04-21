@@ -173,18 +173,18 @@ public class Phobos extends AgentImpl {
       int alloc = agent.getAllocation(auction) - agent.getOwn(auction);
 
       // Work out the price trend using the price from the last round
-      ArrayList<Float> priceHistory = historicalPrice.get(auction);
-      float trend = quote.getAskPrice() - priceHistory.get(priceHistory.size() - 1);
+      ArrayList<Float> priceHistory = historicalPrices.get(auction);
+      // float trend = quote.getAskPrice() - priceHistory.get(flightPriceCounter - 1);
 
       // We want to track the changes in price for the return flights we want
       if (alloc > 0) {
-        ArrayList<Float> priceHistory = historicalPrices.get(auction);
+        priceHistory = historicalPrices.get(auction);
         priceHistory.add(quote.getAskPrice());
 
         // Do the algorithms here that check whether to bid or not
-        if (trend > 0) { // The price is rising
+        // if (trend > 0) { // The price is rising
           
-        }
+        // }
       }
 
       // Track the prices for all the flights anyway for checking in the log
