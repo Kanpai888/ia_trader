@@ -127,41 +127,46 @@
 package se.sics.tac.aw;
 import se.sics.tac.util.ArgEnumerator;
 import java.util.logging.*;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 public class Phobos extends AgentImpl {
-  
-  private class ClientPreference {
-    
-    private int client;
-    
-    public ClientPreference(int clientRef) {
-      client = clientRef;
-    }
-    
-    public int getE1() {
-      return agent.getClientPreference(client, TACAgent.E1);
-    }
-    
-    public int getE2() {
-      return agent.getClientPreference(client, TACAgent.E2);
-    }
-    
-    public int getE3() {
-      return agent.getClientPreference(client, TACAgent.E3);
-    }
-  }
-  
+
   private static final Logger log =
     Logger.getLogger(Phobos.class.getName());
 
   private static final boolean DEBUG = false;
 
+  // Min bonus threshold is $23.5 ($50 hotel bonus / 4 days)
+  // Max bonus threshold is $150 ($150 hotel bonus / 1 day)
+  // At thresholds above $37.5, the agent will never choose TT for a client that wants to 
+  // stay for 4 days ($150 hotel bonus / 4 days = $37.5)
+  private static final int HOTEL_BONUS_THRESHOLD = 30;
+
   private float[] prices;
-  
-  private ClientPreference[] clientPreferences;
-  
+  private float[] previousPrices;
+
+  // Array to show the difference between the current and last price of auctions
+  private float[] trends;
+
+  // HashMap stores auctions of flights that should be bought when price is low
+  // and quantities of them
+  private HashMap<Integer, Integer> buyFlights;
+
+  // Vars used to store return flight price movements
+  private float[][] flightPrices;
+  private int flightPriceCounter;
+  private int flightPriceDay;
+
   protected void init(ArgEnumerator args) {
     prices = new float[agent.getAuctionNo()];
+    previousPrices = new float[agent.getAuctionNo()];
+    trends = new float[agent.getAuctionNo()];
+    buyFlights = new HashMap<Integer, Integer>();
+
+    flightPrices = new float[4][54];
+    flightPriceCounter = 0;
+    flightPriceDay = 0;
   }
 
   // New information about the quotes on the auction (quote.getAuction())
@@ -169,6 +174,66 @@ public class Phobos extends AgentImpl {
   public void quoteUpdated(Quote quote) {
     int auction = quote.getAuction();
     int auctionCategory = agent.getAuctionCategory(auction);
+    int auctionType = agent.getAuctionType(auction);
+    if (auctionCategory == TACAgent.CAT_FLIGHT && auctionType == TACAgent.TYPE_INFLIGHT) {
+      int alloc = agent.getAllocation(auction) - agent.getOwn(auction);
+      // Work out the price trend using the price from the last round
+      // If trends[auction] is negative, price has gone *DOWN*
+      // if it is positive, price has gone *UP*      
+      trends[auction] = quote.getAskPrice() - previousPrices[auction];
+      previousPrices[auction] = quote.getAskPrice();
+
+      if (alloc > 0 && trends[auction] > 0 && agent.getGameTime() > 15000) {
+        // Price is going up after initial set, so buy
+        Bid bid = new Bid(auction);
+        bid.addBidPoint(alloc, 1000);
+        agent.submitBid(bid);
+        log.fine("*** Submitted bid for inflight at price " + quote.getAskPrice() + 
+          " with trend " + trends[auction]);
+      }
+
+      // Failsafe, in case the price has never gone up, buy with 20 seconds left
+      if (agent.getGameTimeLeft() < 20000 && alloc > 0) {
+        Bid bid = new Bid(auction);
+        bid.addBidPoint(alloc, 1000);
+        agent.submitBid(bid);
+      }
+    }
+
+    if (auctionCategory == TACAgent.CAT_FLIGHT && auctionType == TACAgent.TYPE_OUTFLIGHT) {
+      
+      int alloc = agent.getAllocation(auction) - agent.getOwn(auction);
+      trends[auction] = quote.getAskPrice() - previousPrices[auction];
+      previousPrices[auction] = quote.getAskPrice();
+
+      if (alloc > 0) { // If we need this flight
+        if (trends[auction] > 0 && buyFlights.get(auction) > 0) { 
+          // The price is rising and the auction is in the buyFlights HashMap
+          // so create a bid for them
+          Bid bid = new Bid(auction);
+          bid.addBidPoint(buyFlights.get(auction), 1000);
+          agent.submitBid(bid);
+
+          buyFlights.put(auction, 0); // Reset buyFlights HashMap for that auction
+        }
+      }
+
+      // Track the prices for all the flights anyway for checking in the log
+      if (flightPriceDay == 4) {
+        flightPriceDay = 0;
+        flightPriceCounter++;
+      }
+      flightPrices[flightPriceDay++][flightPriceCounter] = quote.getAskPrice();
+
+      // Just a basic implementation to ensure the agent makes valid trips while
+      // working on real impl.
+      // If 20 seconds are left and the flights still aren't bought, buy them
+      if (agent.getGameTimeLeft() < 20000 && alloc > 0) {
+        Bid bid = new Bid(auction);
+        bid.addBidPoint(alloc, 1000);
+        agent.submitBid(bid);
+      }
+    }
     if (auctionCategory == TACAgent.CAT_HOTEL) {
       int alloc = agent.getAllocation(auction); // Allocation is number of items wanted from this auction
       /* If there are any to be won, and the Hypothetical Quantity Won is less than the amount needed */
@@ -178,12 +243,11 @@ public class Phobos extends AgentImpl {
         prices[auction] = quote.getAskPrice() + 50;
         bid.addBidPoint(alloc, prices[auction]);
         if (DEBUG) {
-          log.finest("submitting bid with alloc=" + agent.getAllocation(auction) + " own=" + agent.getOwn(auction));
+          // log.finest("submitting bid with alloc=" + agent.getAllocation(auction) + " own=" + agent.getOwn(auction));
         }
         agent.submitBid(bid);
       }
     } else if (auctionCategory == TACAgent.CAT_ENTERTAINMENT) {
-      //Set alloc to be the number of tickets needed
       int alloc = agent.getAllocation(auction) - agent.getOwn(auction);
       if (alloc != 0) {
         Bid bid = new Bid(auction);
@@ -194,7 +258,7 @@ public class Phobos extends AgentImpl {
         }
         bid.addBidPoint(alloc, prices[auction]);
         if (DEBUG) {
-          log.finest("submitting bid with alloc=" + agent.getAllocation(auction) + " own=" + agent.getOwn(auction));
+          // log.finest("submitting bid with alloc=" + agent.getAllocation(auction) + " own=" + agent.getOwn(auction));
         }
         agent.submitBid(bid);
       }
@@ -211,8 +275,8 @@ public class Phobos extends AgentImpl {
   // There are TACAgent have received an answer on a bid query/submission
   // (new information about the bid is available)
   public void bidUpdated(Bid bid) {
-    log.fine("Bid Updated: id=" + bid.getID() + " auction=" + bid.getAuction() + " state=" + bid.getProcessingStateAsString());
-    log.fine("       Hash: " + bid.getBidHash());
+    log.fine("Bid Updated: id=" + bid.getID() + " auction=" + bid.getAuction() + " state=" + bid.getProcessingStateAsString() + " stateID=" + bid.getProcessingState());
+    // log.fine("       Hash: " + bid.getBidHash());
   }
 
   // The bid has been rejected (reason is bid.getRejectReason())
@@ -237,6 +301,18 @@ public class Phobos extends AgentImpl {
 
   // The current game has ended
   public void gameStopped() {
+    // Output the list of flight prices
+    log.fine("**************** Outputting Flight Prices ****************");
+    log.fine("Update\tDay 1\tDay 2\tDay 3\tDay 4");
+
+    for (int i = 0; i < 54; ++i) {
+      log.fine(i + " \t" + flightPrices[0][i] + "\t" + flightPrices[1][i] + "\t" + flightPrices[2][i] + "\t" + flightPrices[3][i]);
+    }
+
+    // Reset flight logging vars
+    flightPriceCounter = 0;
+    flightPriceDay = 0;
+
     log.fine("Game Stopped!");
   }
 
@@ -252,8 +328,17 @@ public class Phobos extends AgentImpl {
       float price = -1f;
       switch (agent.getAuctionCategory(i)) {
         case TACAgent.CAT_FLIGHT:
+          /*
           if (alloc > 0) {
             price = 1000;
+          }
+          */
+          if (agent.getAuctionType(i) == TACAgent.TYPE_INFLIGHT) {
+            /*
+            if (alloc > 0) {
+              price = 1000;
+            }
+            */
           }
           break;
         case TACAgent.CAT_HOTEL:
@@ -292,7 +377,7 @@ public class Phobos extends AgentImpl {
     for (int i = 0; i < 8; i++) {
       int inFlight = agent.getClientPreference(i, TACAgent.ARRIVAL);
       int outFlight = agent.getClientPreference(i, TACAgent.DEPARTURE);
-      int hotel = agent.getClientPreference(i, TACAgent.HOTEL_VALUE);
+      int hotelBonus = agent.getClientPreference(i, TACAgent.HOTEL_VALUE);
       int type;
 
       // Get the flight preferences auction and remember that we are
@@ -302,9 +387,12 @@ public class Phobos extends AgentImpl {
       auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
       agent.setAllocation(auction, agent.getAllocation(auction) + 1);
 
-      // If the client's hotel_bonus is greater than 70 we will select the
+      buyFlights.put(auction, 0);
+
+      // Check the value of bonus for each day of stay and compare to a threshold
       // expensive hotel (type = 1)
-      if (hotel > 70) {
+      int stayDuration = outFlight - inFlight;
+      if (hotelBonus / stayDuration > HOTEL_BONUS_THRESHOLD) {
         type = TACAgent.TYPE_GOOD_HOTEL;
       } else {
         type = TACAgent.TYPE_CHEAP_HOTEL;
@@ -350,6 +438,49 @@ public class Phobos extends AgentImpl {
     if ((e3 > e1) && (e3 > e2) && lastType == -1)
       return TACAgent.TYPE_MUSEUM;
     return -1;
+  }
+
+  private void clientHotelFulfilled(int clientNo) {
+    int outFlight = agent.getClientPreference(clientNo, TACAgent.DEPARTURE);
+    int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
+
+    // Buy the flight if the price is currently rising, otherwise wait and
+    // monitor as usual
+    if (trends[auction] > 0) { // The price is going up
+      Bid bid = new Bid(auction);
+      bid.addBidPoint(1, 1000);
+      agent.submitBid(bid);
+    } else {
+      // The price is going down, so add it to the HashMap and buy at
+      // lowest price
+      buyFlights.put(auction, buyFlights.get(auction) + 1);
+    }
+  }
+
+  // day is a value from 1 to 4
+  private void clientTripShortend(int clientNo, int day) {
+    // Change the allocation table
+    int outFlight = agent.getClientPreference(clientNo, TACAgent.DEPARTURE);
+    int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
+    agent.setAllocation(auction, agent.getAllocation(auction) - 1);
+    auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, day);
+    agent.setAllocation(auction, agent.getAllocation(auction) + 1);
+
+    // Buy the flight if the price is currently rising, otherwise wait and
+    // monitor as usual
+    if (trends[auction] > 0) { // The price is going up
+      Bid bid = new Bid(auction);
+      bid.addBidPoint(1, 1000);
+      agent.submitBid(bid);
+    } else {
+      // The price is going down, so add it to the HashMap and buy at
+      // lowest price
+      if (buyFlights.get(auction) != null) {
+        buyFlights.put(auction, buyFlights.get(auction) + 1);
+      } else {
+        buyFlights.put(auction, 1);
+      }
+    }
   }
 
 
