@@ -14,6 +14,7 @@ java -jar infoserver.jar
 
 Open localhost:8080, and register a new user. Use the agent name and password.
 
+Compile the agenet with compile.sh or compile.bat
 Run the agent using `java -jar tacagent.jar`
 
 ### Agent Rules

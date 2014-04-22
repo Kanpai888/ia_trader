@@ -158,6 +158,9 @@ public class Phobos extends AgentImpl {
   private int flightPriceCounter;
   private int flightPriceDay;
 
+  private Client[] clients;
+  private ArrayList<Integer> closedAuctions;
+
   protected void init(ArgEnumerator args) {
     prices = new float[agent.getAuctionNo()];
     previousPrices = new float[agent.getAuctionNo()];
@@ -167,6 +170,9 @@ public class Phobos extends AgentImpl {
     flightPrices = new float[4][54];
     flightPriceCounter = 0;
     flightPriceDay = 0;
+
+    clients = new Client[8];
+    closedAuctions = new ArrayList<Integer>();
   }
 
   // New information about the quotes on the auction (quote.getAuction())
@@ -269,13 +275,13 @@ public class Phobos extends AgentImpl {
   // category has arrived (quotes for a specific type of auctions are
   // often requested at once).
   public void quoteUpdated(int auctionCategory) {
-    log.fine("All quotes for " + agent.auctionCategoryToString(auctionCategory) + " has been updated");
+    //log.fine("All quotes for " + agent.auctionCategoryToString(auctionCategory) + " has been updated");
   }
 
   // There are TACAgent have received an answer on a bid query/submission
   // (new information about the bid is available)
   public void bidUpdated(Bid bid) {
-    log.fine("Bid Updated: id=" + bid.getID() + " auction=" + bid.getAuction() + " state=" + bid.getProcessingStateAsString() + " stateID=" + bid.getProcessingState());
+    // log.fine("Bid Updated: id=" + bid.getID() + " auction=" + bid.getAuction() + " state=" + bid.getProcessingStateAsString() + " stateID=" + bid.getProcessingState());
     // log.fine("       Hash: " + bid.getBidHash());
   }
 
@@ -302,12 +308,12 @@ public class Phobos extends AgentImpl {
   // The current game has ended
   public void gameStopped() {
     // Output the list of flight prices
-    log.fine("**************** Outputting Flight Prices ****************");
-    log.fine("Update\tDay 1\tDay 2\tDay 3\tDay 4");
+    // log.fine("**************** Outputting Flight Prices ****************");
+    // log.fine("Update\tDay 1\tDay 2\tDay 3\tDay 4");
 
-    for (int i = 0; i < 54; ++i) {
-      log.fine(i + " \t" + flightPrices[0][i] + "\t" + flightPrices[1][i] + "\t" + flightPrices[2][i] + "\t" + flightPrices[3][i]);
-    }
+    // for (int i = 0; i < 54; ++i) {
+    //   log.fine(i + " \t" + flightPrices[0][i] + "\t" + flightPrices[1][i] + "\t" + flightPrices[2][i] + "\t" + flightPrices[3][i]);
+    // }
 
     // Reset flight logging vars
     flightPriceCounter = 0;
@@ -316,9 +322,80 @@ public class Phobos extends AgentImpl {
     log.fine("Game Stopped!");
   }
 
+ 
+
+
+  
+
   // The auction with id "auction" has closed
   public void auctionClosed(int auction) {
     log.fine("*** Auction " + auction + " closed!");
+
+    // Handle hotel auction closing
+    if(agent.getAuctionCategory(auction) == TACAgent.CAT_HOTEL){
+      int auctionDay = agent.getAuctionDay(auction);
+      int hotelType = agent.getAuctionType(auction);
+      int auctionOwn = agent.getOwn(auction);
+      int ownedAvailible = auctionOwn;
+
+      log.fine("A hotel auction no-"+auction+" has closed");
+      log.fine("It was type "+hotelType);
+      log.fine("We won "+auctionOwn);
+
+      // Check which allocations are not feasible
+      for (int i = 0; i < 8; i++) {
+        int prefInFlight = agent.getClientPreference(i, TACAgent.ARRIVAL);
+        int prefOutFlight = agent.getClientPreference(i, TACAgent.DEPARTURE);
+
+        // We ignore clients that are already sorted with hotel arrangements
+        if(clients[i].hasHotelFulfilled()){
+          continue;
+        }
+
+        // Check if this breaks any prefered travel plans
+        if(clients[i].getAllocatedInDay() <= auctionDay && auctionDay < clients[i].getAllocatedOut() 
+          && clients[i].getAllocatedHotelType() == hotelType){
+
+          // Check if the hotel is availible for this client
+          if(ownedAvailible == 0){
+            // Client's allocated trip is not feasible as we do not own enough hotels
+
+            // Check if the client already has any hotels booked
+            // if(!clients[i].hasOwnedHotelAllocation()){
+              // Check if other hotel is feasible
+
+              // Remember to change the allocation table
+              // Remember to hold on bidding on hotels that are no longer in
+              // the allocation table
+
+            // }else{
+              // Shorten trip
+              // Remember to change the allocation table
+              clients[i].shortenTrip();
+            // }
+          }else{
+            clients[i].addOwnedHotelAllocation(auctionDay);
+            ownedAvailible--; 
+          }
+
+          // Check if there is a newly completed trip
+          if(clients[i].hasHotelFulfilled()){
+            // Buy flight
+            clientHotelFulfilled(i);
+          }
+        }
+        
+        
+
+        // Allocate a hotel night for each day that the client stays
+        // for(int d = inFlight; d < outFlight; d++) {
+        //   auction = agent.getAuctionFor(TACAgent.CAT_HOTEL, type, d);
+        //   log.finer("Adding hotel for day: " + d + " on " + auction);
+        //   agent.setAllocation(auction, agent.getAllocation(auction) + 1);
+        // }
+      }
+      
+    }
   }
 
   // Sends initial bids
@@ -397,6 +474,8 @@ public class Phobos extends AgentImpl {
       } else {
         type = TACAgent.TYPE_CHEAP_HOTEL;
       }
+      // Keeping track of which client should be allocated the good hotel
+      clients[i] = new Client(i, type, inFlight, outFlight);
       // Allocate a hotel night for each day that the client stays
       for (int d = inFlight; d < outFlight; d++) {
         auction = agent.getAuctionFor(TACAgent.CAT_HOTEL, type, d);
@@ -457,6 +536,7 @@ public class Phobos extends AgentImpl {
     }
   }
 
+  // NEED TO CHANGE, trips could be shortended from either start or end day
   // day is a value from 1 to 4
   private void clientTripShortend(int clientNo, int day) {
     // Change the allocation table
@@ -491,6 +571,83 @@ public class Phobos extends AgentImpl {
 
   public static void main (String[] args) {
     TACAgent.main(args);
+  }
+
+  // Helper class
+  public class Client{
+
+    private int clientID;
+    private ArrayList<Integer> ownedHotelDaysAllocated = new ArrayList<Integer>();
+    private int allocatedHotelType;
+    // The days may differ from their preferred days
+    private int allocatedInDay;
+    private int allocatedOutDay;
+
+    public Client(int clientID, int allocatedHotelType, int allocatedInDay, int allocatedOutDay){
+      this.clientID = clientID;
+      this.allocatedHotelType = allocatedHotelType;
+      this.allocatedInDay = allocatedInDay;
+      this.allocatedOutDay = allocatedOutDay;
+    }
+
+    public boolean hasHotelFulfilled(){
+      boolean isComplete = true;
+      for(int k=allocatedInDay; k<allocatedOutDay; k++){
+        if(!ownedHotelDaysAllocated.contains(k)){
+          isComplete = false;
+        }
+      }
+      return isComplete;
+    }
+
+    public boolean hasOwnedHotelAllocation(){
+      if(ownedHotelDaysAllocated.size() > 0){
+        return true;
+      }else{
+        return false;
+      }
+    }
+
+    public void addOwnedHotelAllocation(int day){
+      ownedHotelDaysAllocated.add(day);
+    }
+
+    public int getAllocatedHotelType(){
+      return allocatedHotelType;
+    }
+
+    public int getAllocatedInDay(){
+      return allocatedInDay;
+    }
+
+    public int getAllocatedOut(){
+      return allocatedOutDay;
+    }
+
+    // Checks what the longest viable trip is and sets 
+    public void shortenTrip(){
+      // int bestStart = 0;
+      // int bestEnd = 0;
+
+      // int currentStart = -1;
+
+      // boolean viableDay=false;
+
+      // for(int i=allocatedInDay; i<allocatedOutDay; i++){
+
+      //   if(ownedHotelDaysAllocated.contains(i)){
+      //     viableDay=true;
+      //   }else{
+      //     int auction = agent.getAuctionFor(TACAgent.CAT_HOTEL, allocatedHotelType, i);
+      //     if(!closedAuctions.contains(auction)){
+      //       viableDay=true;
+      //     }
+      //   }
+
+      // }
+
+    }
+
   }
 
 } // DummyAgent
