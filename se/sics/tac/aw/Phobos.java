@@ -578,6 +578,8 @@ public class Phobos extends AgentImpl {
 
     private int clientID;
     private ArrayList<Integer> ownedHotelDaysAllocated = new ArrayList<Integer>();
+    private ArrayList<Integer> requestedInboudFlights = new ArrayList<Integer>();
+    private ArrayList<Integer> requestedOutboundFlights = new ArrayList<Integer>();
     private int allocatedHotelType;
     // The days may differ from their preferred days
     private int allocatedInDay;
@@ -608,6 +610,7 @@ public class Phobos extends AgentImpl {
       }
     }
 
+    // AKA we won a hotel bid
     public void addOwnedHotelAllocation(int day){
       ownedHotelDaysAllocated.add(day);
     }
@@ -624,7 +627,7 @@ public class Phobos extends AgentImpl {
       return allocatedOutDay;
     }
 
-    // Checks what the longest viable trip is and sets 
+    // AKA we lost a hotel bid
     public void shortenTrip(){
       if(ownedHotelDaysAllocated.size() != 0){
         // Check for best trip factoring hotels previously allocated
@@ -671,7 +674,7 @@ public class Phobos extends AgentImpl {
 
         // Set start to be best start
         // Set end to be best start + duration -1
-        
+
 
       }else{
         // Check for best trip based on just what auctions are left
