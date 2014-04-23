@@ -440,19 +440,34 @@ public class Phobos extends AgentImpl {
     return -1;
   }
 
+  /* Method called when all the required hotels for a client have been bought.
+   * Adds the inbound and outbound flights for a client to the monitor list and
+   * buys them when it notices the price start to increase */
   private void clientHotelFulfilled(int clientNo) {
+    int inFlight = agent.getClientPreference(clientNo, TACAgent.ARRIVAL);
     int outFlight = agent.getClientPreference(clientNo, TACAgent.DEPARTURE);
-    int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
+    int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, inFlight);
+    Bid bid;
 
     // Buy the flight if the price is currently rising, otherwise wait and
     // monitor as usual
     if (trends[auction] > 0) { // The price is going up
-      Bid bid = new Bid(auction);
+      bid = new Bid(auction);
       bid.addBidPoint(1, 1000);
       agent.submitBid(bid);
     } else {
       // The price is going down, so add it to the HashMap and buy at
       // lowest price
+      buyFlights.put(auction, buyFlights.get(auction) + 1);
+    }
+
+    // Now repeat for the return flight
+    auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
+    if (trends[auction] > 0) { // The price is going up
+      bid = new Bid(auction);
+      bid.addBidPoint(1, 1000);
+      agent.submitBid(bid);
+    } else {
       buyFlights.put(auction, buyFlights.get(auction) + 1);
     }
   }
@@ -484,7 +499,27 @@ public class Phobos extends AgentImpl {
   }
 
   private void clientTripDepartLate(int clientNo, int day) {
+    int inFlight = agent.getClientPreference(clientNo, TACAgent.ARRIVAL);
+    int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, inFlight);
+    agent.setAllocation(auction, agent.getAllocation(auction) - 1);
+    auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, day);
+    agent.setAllocation(auction, agent.getAllocation(auction) + 1);
 
+    // Buy the flight if the price is currently rising, otherwise wait and
+    // monitor as usual
+    if (trends[auction] > 0) { // The price is going up
+      Bid bid = new Bid(auction);
+      bid.addBidPoint(1, 1000);
+      agent.submitBid(bid);
+    } else {
+      // The price is going down, so add it to the HashMap and buy at
+      // lowest price
+      if (buyFlights.get(auction) != null) {
+        buyFlights.put(auction, buyFlights.get(auction) + 1);
+      } else {
+        buyFlights.put(auction, 1);
+      }
+    }
   }
 
 
