@@ -183,13 +183,13 @@ public class Phobos extends AgentImpl {
       trends[auction] = quote.getAskPrice() - previousPrices[auction];
       previousPrices[auction] = quote.getAskPrice();
 
-      if (alloc > 0 && trends[auction] > 0 && agent.getGameTime() > 15000) {
+      if (alloc > 0 && trends[auction] > 0 && buyFlights.get(auction) > 0) {
         // Price is going up after initial set, so buy
         Bid bid = new Bid(auction);
-        bid.addBidPoint(alloc, 1000);
+        bid.addBidPoint(buyFlights.get(auction), 1000);
         agent.submitBid(bid);
-        log.fine("*** Submitted bid for inflight at price " + quote.getAskPrice() + 
-          " with trend " + trends[auction]);
+
+        buyFlights.put(auction, 0); // Reset buyFlights HashMap for that auction
       }
 
       // Failsafe, in case the price has never gone up, buy with 20 seconds left
@@ -384,10 +384,10 @@ public class Phobos extends AgentImpl {
       // going to buy tickets for these days. (inflight=1, outflight=0)
       int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, inFlight);
       agent.setAllocation(auction, agent.getAllocation(auction) + 1);
+      buyFlights.put(auction, 0); // Add the key to the HashMap
       auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
       agent.setAllocation(auction, agent.getAllocation(auction) + 1);
-
-      buyFlights.put(auction, 0);
+      buyFlights.put(auction, 0); // Add the key to the HashMap
 
       // Check the value of bonus for each day of stay and compare to a threshold
       // expensive hotel (type = 1)
