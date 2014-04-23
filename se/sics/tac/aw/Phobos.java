@@ -458,7 +458,7 @@ public class Phobos extends AgentImpl {
   }
 
   // day is a value from 1 to 4
-  private void clientTripShortend(int clientNo, int day) {
+  private void clientTripArriveEarly(int clientNo, int day) {
     // Change the allocation table
     int outFlight = agent.getClientPreference(clientNo, TACAgent.DEPARTURE);
     int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
@@ -481,6 +481,10 @@ public class Phobos extends AgentImpl {
         buyFlights.put(auction, 1);
       }
     }
+  }
+
+  private void clientTripDepartLate(int clientNo, int day) {
+
   }
 
 
