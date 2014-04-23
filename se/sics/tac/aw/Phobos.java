@@ -626,28 +626,75 @@ public class Phobos extends AgentImpl {
 
     // Checks what the longest viable trip is and sets 
     public void shortenTrip(){
-      // int bestStart = 0;
-      // int bestEnd = 0;
+      if(ownedHotelDaysAllocated.size() != 0){
+        // Check for best trip factoring hotels previously allocated
+        int tempStart = -1;
+        int bestStart = -1
+        int tempNightsNeeded = 0;
+        int bestNightsNeeded = 0;
 
-      // int currentStart = -1;
+        // Check longest continous period of days already owned
+        for (int i=allocatedInDay; i<allocatedOutDay; i++){
+          if(ownedHotelDaysAllocated.contains(i)){
+            if(tempStart == -1){
+              tempStart = i;
+              tempNightsNeeded = 1;
+            }else{
+              tempNightsNeeded++;
+            }
+          }else{
+            if(tempNightsNeeded > bestNightsNeeded){
+              bestStart = tempStart;
+              bestNightsNeeded = tempNightsNeeded;
+            }
+            tempStart = -1;
+            tempNightsNeeded = 0;
+          }
+        }
 
-      // boolean viableDay=false;
+        int auction;
+        // Expand using open auctions for before best owned trip 
+        for (int k = bestStart; k>=0; k--){
+          auction = agent.getAuctionFor(TACAgent.CAT_HOTEL, allocatedHotelType, k);
+          if(!closedAuctions.contains(auction)){
+            bestStart = k;
+            bestNightsNeeded++;
+          }
+        }
+        // Expand using open auctions for after best owned trip 
+        for (int j = bestStart + bestNightsNeeded - 1; k <=4; k++){
+          auction = agent.getAuctionFor(TACAgent.CAT_HOTEL, allocatedHotelType, j);
+          if(!closedAuctions.contains(auction)){
+            bestNightsNeeded++;
+          }
+        }
 
-      // for(int i=allocatedInDay; i<allocatedOutDay; i++){
+        // Set start to be best start
+        // Set end to be best start + duration -1
+        
 
-      //   if(ownedHotelDaysAllocated.contains(i)){
-      //     viableDay=true;
-      //   }else{
-      //     int auction = agent.getAuctionFor(TACAgent.CAT_HOTEL, allocatedHotelType, i);
-      //     if(!closedAuctions.contains(auction)){
-      //       viableDay=true;
-      //     }
-      //   }
+      }else{
+        // Check for best trip based on just what auctions are left
+        // int bestStart = 0;
+        // int bestEnd = 0;
 
-      // }
+        // int currentStart = -1;
 
+        // boolean viableDay=false;
+
+        // for(int i=allocatedInDay; i<allocatedOutDay; i++){
+
+        //   if(ownedHotelDaysAllocated.contains(i)){
+        //     viableDay=true;
+        //   }else{
+        //     int auction = agent.getAuctionFor(TACAgent.CAT_HOTEL, allocatedHotelType, i);
+        //     if(!closedAuctions.contains(auction)){
+        //       viableDay=true;
+        //     }
+        //   }
+
+        // }
+      }
     }
-
   }
-
 } // DummyAgent
