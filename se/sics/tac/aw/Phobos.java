@@ -651,6 +651,7 @@ public class Phobos extends AgentImpl {
 
         // Check if left most hotel day
         if(dayLost == allocatedInDay){
+          log.fine("Attempting to shorten trip, lost left most day");
           if(dayLost + 1 == allocatedOutDay){
             log.fine("Client "+clientID+" cannot fufilled trip due to hotels");
             return;
@@ -682,6 +683,7 @@ public class Phobos extends AgentImpl {
 
         // Check if right most hotel day (no hotel needed on last day)
         }else if(dayLost == allocatedOutDay - 1){
+          log.fine("Attempting to shorten trip, lost right most day");
           if(dayLost - 1 == allocatedInDay){
             log.fine("Client "+clientID+" cannot fufilled trip due to hotels");
             return;
@@ -713,6 +715,9 @@ public class Phobos extends AgentImpl {
 
         // Check if in the middle of an allocated trip
         }else if(allocatedInDay < dayLost && dayLost < allocatedOutDay -1){
+
+          log.fine("Attempting to shorten trip, a middle day");
+          
           // Calculate best remainder trip, we can assume that everything between allocatedInDay
           // and allocatedOutDay except dayLost is a open auction or we own the hotel room. 
           int leftDuration = dayLost - allocatedInDay;
