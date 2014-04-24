@@ -578,7 +578,8 @@ public class Phobos extends AgentImpl {
 
     private int clientID;
     private ArrayList<Integer> ownedHotelDaysAllocated = new ArrayList<Integer>();
-    private ArrayList<Integer> requestedInboudFlights = new ArrayList<Integer>();
+    // These are the days I've actually request to be bought
+    private ArrayList<Integer> requestedInboundFlights = new ArrayList<Integer>();
     private ArrayList<Integer> requestedOutboundFlights = new ArrayList<Integer>();
     private int allocatedHotelType;
     // The days may differ from their preferred days
@@ -613,6 +614,15 @@ public class Phobos extends AgentImpl {
     // AKA we won a hotel bid
     public void addOwnedHotelAllocation(int day){
       ownedHotelDaysAllocated.add(day);
+      
+      // Buy flights if day is at the edge of the allocated trip
+      if(day == allocatedInDay){
+        requestedInboundFlights.add(allocatedInDay);
+        // TODO Call james's code to buy flight
+      }else if(day == allocatedOutDay){
+        requestedInboundFlights.add(allocatedOutDay);
+        // TODO Call james's code to buy flight   
+      }
     }
 
     public int getAllocatedHotelType(){
@@ -656,6 +666,7 @@ public class Phobos extends AgentImpl {
             agent.setAllocation(inAuction, agent.getAllocation(inAuction) + 1 );
             
             // TODO Call james's code to buy flight
+            requestedInboundFlights.add(allocatedInDay);
 
             return;
           }
@@ -685,6 +696,7 @@ public class Phobos extends AgentImpl {
             agent.setAllocation(inAuction, agent.getAllocation(outAuction) + 1 );
 
             // TODO Call james's code to buy flight
+            requestedOutboudFlights.add(allocatedOutDay);
 
             return;
           }
