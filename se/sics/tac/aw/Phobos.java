@@ -679,6 +679,7 @@ public class Phobos extends AgentImpl {
             log.fine("ERROR - Should not reach. There is a closed auction between an allocated trip");
           }
 
+
         // Check if right most hotel day (no hotel needed on last day)
         }else if(dayLost == allocatedOutDay - 1){
           if(dayLost - 1 == allocatedInDay){
@@ -696,7 +697,7 @@ public class Phobos extends AgentImpl {
             agent.setAllocation(inAuction, agent.getAllocation(outAuction) + 1 );
 
             // TODO Call james's code to buy flight
-            requestedOutboudFlights.add(allocatedOutDay);
+            requestedOutboundFlights.add(allocatedOutDay);
 
             return;
           }
@@ -708,57 +709,63 @@ public class Phobos extends AgentImpl {
           }else{
             log.fine("ERROR - Should not reach. There is a closed auction between an allocated trip");
           }
-        // Check if in the middle of a allocated trip
-        }else if(allocatedInDay < dayLost && datLost < allocatedOutDay -1){
 
+
+        // Check if in the middle of an allocated trip
+        }else if(allocatedInDay < dayLost && dayLost < allocatedOutDay -1){
+          // Calculate best remainder trip, we can assume that everything between allocatedInDay
+          // and allocatedOutDay except dayLost is a open auction or we own the hotel room. 
+          int leftDuration = dayLost - allocatedInDay;
+          int rightDuration = allocatedOutDay - 1 - dayLost;
+          boolean leftIsBest;
+
+          if(leftDuration > rightDuration){
+            leftIsBest = true;
+          }else if(leftDuration < rightDuration) {
+            leftIsBest = false;
+          }else if(leftDuration == rightDuration){
+            if(requestedInboundFlights.contains(allocatedInDay)){
+              // Bias towards side that has a flight purchased in even duration
+              leftIsBest = true;
+            }else if(requestedOutboundFlights.contains(allocatedOutDay)){
+              leftIsBest = false;
+            }else if(dayLost == 1){
+              // In this scenerio, buying day 0 is likely cheaper than buying day 2
+              leftIsBest = true;
+            }else if(dayLost == 2){
+              leftIsBest = false;
+            }
+          }
+
+          if(leftIsBest){
+            // Remove uneeded hotel allocations
+            for(int d = dayLost + 1; d < allocatedOutDay; d++){
+              int hotelAuction = agent.getAuctionFor(TACAgent.CAT_HOTEL, allocatedHotelType, d);
+              agent.setAllocation(hotelAuction, agent.getAllocation(hotelAuction) -1);
+            }
+            allocatedOutDay = dayLost;
+          }else{
+            for(int d = allocatedInDay; d < dayLost; d++){
+              int hotelAuction = agent.getAuctionFor(TACAgent.CAT_HOTEL, allocatedHotelType, d);
+              agent.setAllocation(hotelAuction, agent.getAllocation(hotelAuction) -1);
+            }
+            allocatedInDay = dayLost + 1;
+          }
+
+          if(hasHotelFulfilled){
+            // If this completes the trip, then we need to buy the missing 
+            if(!requestedInboundFlights.contains(allocatedInDay)){
+
+              // TODO Call james's code to buy flight
+              requestedInboundFlights.add(allocatedInDay);
+            }
+            if(!requestedOutboundFlights.contains(allocatedOutDay)){
+
+              // TODO Call james's code to buy flight
+              requestedOutboundFlights.add(allocatedInDay);
+            }
+          }
         }
-
-        // // Check for best trip factoring hotels previously allocated
-        // int tempStart = -1;
-        // int bestStart = -1
-        // int tempNightsNeeded = 0;
-        // int bestNightsNeeded = 0;
-
-        // // Check longest continous period of days already owned
-        // for (int i=allocatedInDay; i<allocatedOutDay; i++){
-        //   if(ownedHotelDaysAllocated.contains(i)){
-        //     if(tempStart == -1){
-        //       tempStart = i;
-        //       tempNightsNeeded = 1;
-        //     }else{
-        //       tempNightsNeeded++;
-        //     }
-        //   }else{
-        //     if(tempNightsNeeded > bestNightsNeeded){
-        //       bestStart = tempStart;
-        //       bestNightsNeeded = tempNightsNeeded;
-        //     }
-        //     tempStart = -1;
-        //     tempNightsNeeded = 0;
-        //   }
-        // }
-
-        // int auction;
-        // // Expand using open auctions for before best owned trip 
-        // for (int k = bestStart; k>=0; k--){
-        //   auction = agent.getAuctionFor(TACAgent.CAT_HOTEL, allocatedHotelType, k);
-        //   if(!closedAuctions.contains(auction)){
-        //     bestStart = k;
-        //     bestNightsNeeded++;
-        //   }
-        // }
-        // // Expand using open auctions for after best owned trip 
-        // for (int j = bestStart + bestNightsNeeded - 1; k <=4; k++){
-        //   auction = agent.getAuctionFor(TACAgent.CAT_HOTEL, allocatedHotelType, j);
-        //   if(!closedAuctions.contains(auction)){
-        //     bestNightsNeeded++;
-        //   }
-        // }
-
-        // Set start to be best start
-        // Set end to be best start + duration -1
-
-
       }else{
         // Try to switch hotels
       }
