@@ -659,7 +659,7 @@ public class Phobos extends AgentImpl {
           if(ownedHotelDaysAllocated.contains(dayLost + 1)){
             // Remove old flight alllocation
             int oldAuction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, allocatedInDay);
-            agent.setAllocation(inAuction, agent.getAllocation(oldAuction) - 1 );
+            agent.setAllocation(oldAuction, agent.getAllocation(oldAuction) - 1 );
 
             // We own the left most hotel for this trip, buy inbound flight
             allocatedInDay = allocatedInDay + 1;
@@ -691,12 +691,12 @@ public class Phobos extends AgentImpl {
           if(ownedHotelDaysAllocated.contains(dayLost - 1)){
             // Remove old flight alllocation
             int oldAuction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, allocatedOutDay);
-            agent.setAllocation(inAuction, agent.getAllocation(oldAuction) - 1 );
+            agent.setAllocation(oldAuction, agent.getAllocation(oldAuction) - 1 );
 
             // We own the right most hotel for this trip, buy outbound flight and ammend allocation
             allocatedOutDay = allocatedOutDay - 1;
             int outAuction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, allocatedOutDay);
-            agent.setAllocation(inAuction, agent.getAllocation(outAuction) + 1 );
+            agent.setAllocation(outAuction, agent.getAllocation(outAuction) + 1 );
 
             // TODO Call james's code to buy flight
             requestedOutboundFlights.add(allocatedOutDay);
@@ -707,7 +707,7 @@ public class Phobos extends AgentImpl {
           if(!closedAuctions.contains(hotelAuction)){
             // Set new start day
             allocatedInDay = dayLost + 1;
-            return
+            return;
           }else{
             log.fine("ERROR - Should not reach. There is a closed auction between an allocated trip");
           }
@@ -722,7 +722,7 @@ public class Phobos extends AgentImpl {
           // and allocatedOutDay except dayLost is a open auction or we own the hotel room. 
           int leftDuration = dayLost - allocatedInDay;
           int rightDuration = allocatedOutDay - 1 - dayLost;
-          boolean leftIsBest;
+          boolean leftIsBest = true;
 
           if(leftDuration > rightDuration){
             leftIsBest = true;
@@ -757,7 +757,7 @@ public class Phobos extends AgentImpl {
             allocatedInDay = dayLost + 1;
           }
 
-          if(hasHotelFulfilled){
+          if(hasHotelFulfilled()){
             // If this completes the trip, then we need to buy the missing 
             if(!requestedInboundFlights.contains(allocatedInDay)){
 
@@ -773,6 +773,33 @@ public class Phobos extends AgentImpl {
         }
       }else{
         // Try to switch hotels
+        boolean isViable = true;
+        int otherHotelType;
+        if(allocatedHotelType == TACAgent.TYPE_GOOD_HOTEL){
+          otherHotelType = TACAgent.TYPE_CHEAP_HOTEL;
+        }else{
+          otherHotelType = TACAgent.TYPE_GOOD_HOTEL;
+        }
+
+        for(int v = allocatedInDay; v < allocatedOutDay; v++){
+          int hotelAuction = agent.getAuctionFor(TACAgent.CAT_HOTEL, otherHotelType, v);
+          if(closedAuctions.contains(hotelAuction)){
+            isViable = false;
+          }
+        }
+
+        if(isViable){
+          int hotelAuction;
+          for(int k = allocatedInDay; k < allocatedOutDay; k++){
+            // Removing old allocation
+            hotelAuction = agent.getAuctionFor(TACAgent.CAT_HOTEL, allocatedHotelType, k);
+            agent.setAllocation(hotelAuction, agent.getAllocation(hotelAuction) - 1);
+
+            hotelAuction = agent.getAuctionFor(TACAgent.CAT_HOTEL, otherHotelType, k);
+            agent.setAllocation(hotelAuction, agent.getAllocation(hotelAuction) + 1);
+          }
+          allocatedHotelType = otherHotelType;
+        }
       }
     }
   }
