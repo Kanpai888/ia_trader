@@ -383,7 +383,7 @@ public class Phobos extends AgentImpl {
           // Check if there is a newly completed trip
           if(clients[i].hasHotelFulfilled()){
             // Buy flight
-            clientHotelFulfilled(i);
+            // clientHotelFulfilled(i);
             log.fine("Client "+i+" has hotels fufilled");
           }
         }
@@ -663,7 +663,7 @@ public class Phobos extends AgentImpl {
       if(day == allocatedInDay){
         requestedInboundFlights.add(allocatedInDay);
         buyInFlight(allocatedInDay);
-      }else if(day == allocatedOutDay){
+      }else if(day == allocatedOutDay - 1){
         requestedInboundFlights.add(allocatedOutDay);
         buyOutFlight(allocatedOutDay);
       }
