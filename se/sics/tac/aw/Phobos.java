@@ -789,7 +789,7 @@ public class Phobos extends AgentImpl {
         int hotelAuction = agent.getAuctionFor(TACAgent.CAT_HOTEL, allocatedHotelType, dayLost - 1);
         if(!closedAuctions.contains(hotelAuction)){
           // Set new start day
-          allocatedInDay = dayLost + 1;
+          allocatedOutDay = dayLost;
           return;
         }else{
           log.fine("ERROR - Should not reach. There is a closed auction between an allocated trip");
