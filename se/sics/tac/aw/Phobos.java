@@ -341,7 +341,8 @@ public class Phobos extends AgentImpl {
 
       log.fine("A hotel auction no-"+auction+" has closed");
       log.fine("It was type "+hotelType);
-      log.fine("We won "+auctionOwn);
+      int alloc = agent.getAllocation(auction);
+      log.fine("We won "+auctionOwn+", we wanted "+alloc);
 
       // Check which allocations are not feasible
       for (int i = 0; i < 8; i++) {
@@ -350,6 +351,7 @@ public class Phobos extends AgentImpl {
 
         // We ignore clients that are already sorted with hotel arrangements
         if(clients[i].hasHotelFulfilled()){
+          // log.fine("Skip client "+i+" as trip has been fufilled");
           continue;
         }
 
@@ -382,6 +384,7 @@ public class Phobos extends AgentImpl {
           if(clients[i].hasHotelFulfilled()){
             // Buy flight
             clientHotelFulfilled(i);
+            log.fine("Client "+i+" has hotels fufilled");
           }
         }
         
@@ -647,8 +650,9 @@ public class Phobos extends AgentImpl {
 
     // AKA we lost a hotel bid
     public void shortenTrip(int dayLost){
+      log.fine("++Attempting to shorten trip for "+clientID);
       if(ownedHotelDaysAllocated.size() != 0){
-
+        log.fine("AAA");
         // Check if left most hotel day
         if(dayLost == allocatedInDay){
           log.fine("Attempting to shorten trip, lost left most day");
@@ -772,6 +776,7 @@ public class Phobos extends AgentImpl {
           }
         }
       }else{
+        log.fine("BBB");
         // Try to switch hotels
         boolean isViable = true;
         int otherHotelType;
