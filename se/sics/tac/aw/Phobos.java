@@ -691,137 +691,8 @@ public class Phobos extends AgentImpl {
 
     // AKA we lost a hotel bid
     public void shortenTrip(int dayLost){
-      log.fine("++Attempting to shorten trip for "+clientID);
-      if(ownedHotelDaysAllocated.size() != 0){
-        log.fine("AAA");
-        // Check if left most hotel day
-        if(dayLost == allocatedInDay){
-          log.fine("Attempting to shorten trip, lost left most day");
-          if(dayLost + 1 == allocatedOutDay){
-            log.fine("Client "+clientID+" cannot fufilled trip due to hotels");
-            return;
-          } 
-          if(ownedHotelDaysAllocated.contains(dayLost + 1)){
-            // Remove old flight alllocation
-            int oldAuction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, allocatedInDay);
-            agent.setAllocation(oldAuction, agent.getAllocation(oldAuction) - 1 );
-
-            // We own the left most hotel for this trip, buy inbound flight
-            allocatedInDay = allocatedInDay + 1;
-            int inAuction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, allocatedInDay);
-            agent.setAllocation(inAuction, agent.getAllocation(inAuction) + 1 );
-            
-            // Call james's code to buy flight
-            requestedInboundFlights.add(allocatedInDay);
-            buyInFlight(allocatedInDay);
-
-            return;
-          }
-          // Check if there is a open auction availible
-          int hotelAuction = agent.getAuctionFor(TACAgent.CAT_HOTEL, allocatedHotelType, dayLost + 1);
-          if(!closedAuctions.contains(hotelAuction)){
-            allocatedInDay = allocatedInDay + 1;
-            return;
-          }else{
-            log.fine("ERROR - Should not reach. There is a closed auction between an allocated trip");
-          }
-
-
-        // Check if right most hotel day (no hotel needed on last day)
-        }else if(dayLost == allocatedOutDay - 1){
-          log.fine("Attempting to shorten trip, lost right most day");
-          if(dayLost - 1 == allocatedInDay){
-            log.fine("Client "+clientID+" cannot fufilled trip due to hotels");
-            return;
-          } 
-          if(ownedHotelDaysAllocated.contains(dayLost - 1)){
-            // Remove old flight alllocation
-            int oldAuction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, allocatedOutDay);
-            agent.setAllocation(oldAuction, agent.getAllocation(oldAuction) - 1 );
-
-            // We own the right most hotel for this trip, buy outbound flight and ammend allocation
-            allocatedOutDay = allocatedOutDay - 1;
-            int outAuction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, allocatedOutDay);
-            agent.setAllocation(outAuction, agent.getAllocation(outAuction) + 1 );
-
-            // Call james's code to buy flight
-            requestedOutboundFlights.add(allocatedOutDay);
-            buyOutFlight(allocatedOutDay);
-
-            return;
-          }
-          int hotelAuction = agent.getAuctionFor(TACAgent.CAT_HOTEL, allocatedHotelType, dayLost - 1);
-          if(!closedAuctions.contains(hotelAuction)){
-            // Set new start day
-            allocatedInDay = dayLost + 1;
-            return;
-          }else{
-            log.fine("ERROR - Should not reach. There is a closed auction between an allocated trip");
-          }
-
-
-        // Check if in the middle of an allocated trip
-        }else if(allocatedInDay < dayLost && dayLost < allocatedOutDay -1){
-
-          log.fine("Attempting to shorten trip, a middle day");
-          
-          // Calculate best remainder trip, we can assume that everything between allocatedInDay
-          // and allocatedOutDay except dayLost is a open auction or we own the hotel room. 
-          int leftDuration = dayLost - allocatedInDay;
-          int rightDuration = allocatedOutDay - 1 - dayLost;
-          boolean leftIsBest = true;
-
-          if(leftDuration > rightDuration){
-            leftIsBest = true;
-          }else if(leftDuration < rightDuration) {
-            leftIsBest = false;
-          }else if(leftDuration == rightDuration){
-            if(requestedInboundFlights.contains(allocatedInDay)){
-              // Bias towards side that has a flight purchased in even duration
-              leftIsBest = true;
-            }else if(requestedOutboundFlights.contains(allocatedOutDay)){
-              leftIsBest = false;
-            }else if(dayLost == 1){
-              // In this scenerio, buying day 0 is likely cheaper than buying day 2
-              leftIsBest = true;
-            }else if(dayLost == 2){
-              leftIsBest = false;
-            }
-          }
-
-          if(leftIsBest){
-            // Remove uneeded hotel allocations
-            for(int d = dayLost + 1; d < allocatedOutDay; d++){
-              int hotelAuction = agent.getAuctionFor(TACAgent.CAT_HOTEL, allocatedHotelType, d);
-              agent.setAllocation(hotelAuction, agent.getAllocation(hotelAuction) -1);
-            }
-            allocatedOutDay = dayLost;
-          }else{
-            for(int d = allocatedInDay; d < dayLost; d++){
-              int hotelAuction = agent.getAuctionFor(TACAgent.CAT_HOTEL, allocatedHotelType, d);
-              agent.setAllocation(hotelAuction, agent.getAllocation(hotelAuction) -1);
-            }
-            allocatedInDay = dayLost + 1;
-          }
-
-          if(hasHotelFulfilled()){
-            // If this completes the trip, then we need to buy the missing 
-            if(!requestedInboundFlights.contains(allocatedInDay)){
-
-              // Call james's code to buy flight
-              requestedInboundFlights.add(allocatedInDay);
-              buyInFlight(allocatedInDay);
-            }
-            if(!requestedOutboundFlights.contains(allocatedOutDay)){
-
-              // Call james's code to buy flight
-              requestedOutboundFlights.add(allocatedOutDay);
-              buyOutFlight(allocatedOutDay);
-            }
-          }
-        }
-      }else{
-        log.fine("BBB");
+      
+      if(ownedHotelDaysAllocated.size() == 0){
         // Try to switch hotels
         boolean isViable = true;
         int otherHotelType;
@@ -839,6 +710,7 @@ public class Phobos extends AgentImpl {
         }
 
         if(isViable){
+          log.fine("Attempting to switch hotels for "+clientID);
           int hotelAuction;
           for(int k = allocatedInDay; k < allocatedOutDay; k++){
             // Removing old allocation
@@ -849,8 +721,141 @@ public class Phobos extends AgentImpl {
             agent.setAllocation(hotelAuction, agent.getAllocation(hotelAuction) + 1);
           }
           allocatedHotelType = otherHotelType;
+
+          // If switch is possible, then switch,
+          // Otherwise the method does not return and will shorten the trip instead
+          return;
         }
       }
+
+      log.fine("Attempting to shorten trip for "+clientID);
+      // Check if left most hotel day
+      if(dayLost == allocatedInDay){
+        log.fine("Attempting to shorten trip, lost left most day");
+        if(dayLost + 1 == allocatedOutDay){
+          log.fine("Client "+clientID+" cannot fufilled trip due to hotels");
+          return;
+        } 
+        if(ownedHotelDaysAllocated.contains(dayLost + 1)){
+          // Remove old flight alllocation
+          int oldAuction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, allocatedInDay);
+          agent.setAllocation(oldAuction, agent.getAllocation(oldAuction) - 1 );
+
+          // We own the left most hotel for this trip, buy inbound flight
+          allocatedInDay = allocatedInDay + 1;
+          int inAuction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, allocatedInDay);
+          agent.setAllocation(inAuction, agent.getAllocation(inAuction) + 1 );
+          
+          // Call james's code to buy flight
+          requestedInboundFlights.add(allocatedInDay);
+          buyInFlight(allocatedInDay);
+
+          return;
+        }
+        // Check if there is a open auction availible
+        int hotelAuction = agent.getAuctionFor(TACAgent.CAT_HOTEL, allocatedHotelType, dayLost + 1);
+        if(!closedAuctions.contains(hotelAuction)){
+          allocatedInDay = allocatedInDay + 1;
+          return;
+        }else{
+          log.fine("ERROR - Should not reach. There is a closed auction between an allocated trip");
+        }
+
+
+      // Check if right most hotel day (no hotel needed on last day)
+      }else if(dayLost == allocatedOutDay - 1){
+        log.fine("Attempting to shorten trip, lost right most day");
+        if(dayLost - 1 == allocatedInDay){
+          log.fine("Client "+clientID+" cannot fufilled trip due to hotels");
+          return;
+        } 
+        if(ownedHotelDaysAllocated.contains(dayLost - 1)){
+          // Remove old flight alllocation
+          int oldAuction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, allocatedOutDay);
+          agent.setAllocation(oldAuction, agent.getAllocation(oldAuction) - 1 );
+
+          // We own the right most hotel for this trip, buy outbound flight and ammend allocation
+          allocatedOutDay = allocatedOutDay - 1;
+          int outAuction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, allocatedOutDay);
+          agent.setAllocation(outAuction, agent.getAllocation(outAuction) + 1 );
+
+          // Call james's code to buy flight
+          requestedOutboundFlights.add(allocatedOutDay);
+          buyOutFlight(allocatedOutDay);
+
+          return;
+        }
+        int hotelAuction = agent.getAuctionFor(TACAgent.CAT_HOTEL, allocatedHotelType, dayLost - 1);
+        if(!closedAuctions.contains(hotelAuction)){
+          // Set new start day
+          allocatedInDay = dayLost + 1;
+          return;
+        }else{
+          log.fine("ERROR - Should not reach. There is a closed auction between an allocated trip");
+        }
+
+
+      // Check if in the middle of an allocated trip
+      }else if(allocatedInDay < dayLost && dayLost < allocatedOutDay -1){
+
+        log.fine("Attempting to shorten trip, a middle day");
+        
+        // Calculate best remainder trip, we can assume that everything between allocatedInDay
+        // and allocatedOutDay except dayLost is a open auction or we own the hotel room. 
+        int leftDuration = dayLost - allocatedInDay;
+        int rightDuration = allocatedOutDay - 1 - dayLost;
+        boolean leftIsBest = true;
+
+        if(leftDuration > rightDuration){
+          leftIsBest = true;
+        }else if(leftDuration < rightDuration) {
+          leftIsBest = false;
+        }else if(leftDuration == rightDuration){
+          if(requestedInboundFlights.contains(allocatedInDay)){
+            // Bias towards side that has a flight purchased in even duration
+            leftIsBest = true;
+          }else if(requestedOutboundFlights.contains(allocatedOutDay)){
+            leftIsBest = false;
+          }else if(dayLost == 1){
+            // In this scenerio, buying day 0 is likely cheaper than buying day 2
+            leftIsBest = true;
+          }else if(dayLost == 2){
+            leftIsBest = false;
+          }
+        }
+
+        if(leftIsBest){
+          // Remove uneeded hotel allocations
+          for(int d = dayLost + 1; d < allocatedOutDay; d++){
+            int hotelAuction = agent.getAuctionFor(TACAgent.CAT_HOTEL, allocatedHotelType, d);
+            agent.setAllocation(hotelAuction, agent.getAllocation(hotelAuction) -1);
+          }
+          allocatedOutDay = dayLost;
+        }else{
+          for(int d = allocatedInDay; d < dayLost; d++){
+            int hotelAuction = agent.getAuctionFor(TACAgent.CAT_HOTEL, allocatedHotelType, d);
+            agent.setAllocation(hotelAuction, agent.getAllocation(hotelAuction) -1);
+          }
+          allocatedInDay = dayLost + 1;
+        }
+
+        if(hasHotelFulfilled()){
+          // If this completes the trip, then we need to buy the missing 
+          if(!requestedInboundFlights.contains(allocatedInDay)){
+
+            // Call james's code to buy flight
+            requestedInboundFlights.add(allocatedInDay);
+            buyInFlight(allocatedInDay);
+          }
+          if(!requestedOutboundFlights.contains(allocatedOutDay)){
+
+            // Call james's code to buy flight
+            requestedOutboundFlights.add(allocatedOutDay);
+            buyOutFlight(allocatedOutDay);
+          }
+        }
+      }
+      
     }
   }
 } // DummyAgent
