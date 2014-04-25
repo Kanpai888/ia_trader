@@ -473,13 +473,13 @@ public class Phobos extends AgentImpl {
   }
 
   // day is a value from 1 to 4
-  private void clientTripArriveEarly(int clientNo, int day) {
+  private void buyOutFlight(int day) {
     // Change the allocation table
-    int outFlight = agent.getClientPreference(clientNo, TACAgent.DEPARTURE);
-    int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
-    agent.setAllocation(auction, agent.getAllocation(auction) - 1);
-    auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, day);
-    agent.setAllocation(auction, agent.getAllocation(auction) + 1);
+    // int outFlight = agent.getClientPreference(clientNo, TACAgent.DEPARTURE);
+    // int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
+    // agent.setAllocation(auction, agent.getAllocation(auction) - 1);
+    int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, day);
+    // agent.setAllocation(auction, agent.getAllocation(auction) + 1);
 
     // Buy the flight if the price is currently rising, otherwise wait and
     // monitor as usual
@@ -498,12 +498,12 @@ public class Phobos extends AgentImpl {
     }
   }
 
-  private void clientTripDepartLate(int clientNo, int day) {
-    int inFlight = agent.getClientPreference(clientNo, TACAgent.ARRIVAL);
-    int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, inFlight);
-    agent.setAllocation(auction, agent.getAllocation(auction) - 1);
-    auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, day);
-    agent.setAllocation(auction, agent.getAllocation(auction) + 1);
+  private void buyInFlight(int day) {
+    // int inFlight = agent.getClientPreference(clientNo, TACAgent.ARRIVAL);
+    // int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, inFlight);
+    // agent.setAllocation(auction, agent.getAllocation(auction) - 1);
+    int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, day);
+    // agent.setAllocation(auction, agent.getAllocation(auction) + 1);
 
     // Buy the flight if the price is currently rising, otherwise wait and
     // monitor as usual
