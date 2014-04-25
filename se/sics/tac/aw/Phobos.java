@@ -663,7 +663,8 @@ public class Phobos extends AgentImpl {
       if(day == allocatedInDay){
         requestedInboundFlights.add(allocatedInDay);
         buyInFlight(allocatedInDay);
-      }else if(day == allocatedOutDay - 1){
+      }
+      if(day == allocatedOutDay - 1){
         requestedInboundFlights.add(allocatedOutDay);
         buyOutFlight(allocatedOutDay);
       }
