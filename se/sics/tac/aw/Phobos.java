@@ -557,6 +557,7 @@ public class Phobos extends AgentImpl {
   // NEED TO CHANGE, trips could be shortended from either start or end day
   // day is a value from 1 to 4
   private void buyOutFlight(int day) {
+    log.fine("Monitor out flight for day "+day);
     // Change the allocation table
     // int outFlight = agent.getClientPreference(clientNo, TACAgent.DEPARTURE);
     // int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
@@ -582,6 +583,7 @@ public class Phobos extends AgentImpl {
   }
 
   private void buyInFlight(int day) {
+    log.fine("Monitor in flight for day "+day);
     // int inFlight = agent.getClientPreference(clientNo, TACAgent.ARRIVAL);
     // int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, inFlight);
     // agent.setAllocation(auction, agent.getAllocation(auction) - 1);
