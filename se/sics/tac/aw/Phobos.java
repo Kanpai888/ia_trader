@@ -660,10 +660,10 @@ public class Phobos extends AgentImpl {
       // Buy flights if day is at the edge of the allocated trip
       if(day == allocatedInDay){
         requestedInboundFlights.add(allocatedInDay);
-        // TODO Call james's code to buy flight
+        buyInFlight(allocatedInDay);
       }else if(day == allocatedOutDay){
         requestedInboundFlights.add(allocatedOutDay);
-        // TODO Call james's code to buy flight   
+        buyOutFlight(allocatedOutDay);
       }
     }
 
@@ -709,8 +709,9 @@ public class Phobos extends AgentImpl {
             int inAuction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, allocatedInDay);
             agent.setAllocation(inAuction, agent.getAllocation(inAuction) + 1 );
             
-            // TODO Call james's code to buy flight
+            // Call james's code to buy flight
             requestedInboundFlights.add(allocatedInDay);
+            buyInFlight(allocatedInDay);
 
             return;
           }
@@ -741,8 +742,9 @@ public class Phobos extends AgentImpl {
             int outAuction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, allocatedOutDay);
             agent.setAllocation(outAuction, agent.getAllocation(outAuction) + 1 );
 
-            // TODO Call james's code to buy flight
+            // Call james's code to buy flight
             requestedOutboundFlights.add(allocatedOutDay);
+            buyOutFlight(allocatedOutDay);
 
             return;
           }
@@ -804,13 +806,15 @@ public class Phobos extends AgentImpl {
             // If this completes the trip, then we need to buy the missing 
             if(!requestedInboundFlights.contains(allocatedInDay)){
 
-              // TODO Call james's code to buy flight
+              // Call james's code to buy flight
               requestedInboundFlights.add(allocatedInDay);
+              buyInFlight(allocatedInDay);
             }
             if(!requestedOutboundFlights.contains(allocatedOutDay)){
 
-              // TODO Call james's code to buy flight
-              requestedOutboundFlights.add(allocatedInDay);
+              // Call james's code to buy flight
+              requestedOutboundFlights.add(allocatedOutDay);
+              buyOutFlight(allocatedOutDay);
             }
           }
         }
