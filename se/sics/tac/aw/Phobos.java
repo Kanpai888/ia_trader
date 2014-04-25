@@ -146,6 +146,9 @@ public class Phobos extends AgentImpl {
   private float[] prices;
   private float[] previousPrices;
 
+  // Lowest price we can bid for rooms that we no longer want
+  private float[] unwantedPrices;
+
   // Array to show the difference between the current and last price of auctions
   private float[] trends;
 
@@ -246,7 +249,16 @@ public class Phobos extends AgentImpl {
       if (alloc > 0 && quote.hasHQW(agent.getBid(auction)) && quote.getHQW() < alloc) {
         Bid bid = new Bid(auction);
         // Can not own anything in hotel auctions...
+
+        // Number of this type that we no longer want, cannot reduce number of rooms being bid on.
+        // So we want to pay as little as possible
+        int numUnwanted = quote.getBid().getQuantity() - alloc;
+        if(numUnwanted > 0){
+          bid.addBidPoint(numUnwanted, unwantedPrices[auction]);
+        }
+
         prices[auction] = quote.getAskPrice() + 50;
+
         bid.addBidPoint(alloc, prices[auction]);
         if (DEBUG) {
           // log.finest("submitting bid with alloc=" + agent.getAllocation(auction) + " own=" + agent.getOwn(auction));
@@ -702,6 +714,7 @@ public class Phobos extends AgentImpl {
             // Removing old allocation
             hotelAuction = agent.getAuctionFor(TACAgent.CAT_HOTEL, allocatedHotelType, k);
             agent.setAllocation(hotelAuction, agent.getAllocation(hotelAuction) - 1);
+            unwantedPrices[hotelAuction] = prices[hotelAuction];
 
             hotelAuction = agent.getAuctionFor(TACAgent.CAT_HOTEL, otherHotelType, k);
             agent.setAllocation(hotelAuction, agent.getAllocation(hotelAuction) + 1);
@@ -815,12 +828,14 @@ public class Phobos extends AgentImpl {
           for(int d = dayLost + 1; d < allocatedOutDay; d++){
             int hotelAuction = agent.getAuctionFor(TACAgent.CAT_HOTEL, allocatedHotelType, d);
             agent.setAllocation(hotelAuction, agent.getAllocation(hotelAuction) -1);
+            unwantedPrices[hotelAuction] = prices[hotelAuction];
           }
           allocatedOutDay = dayLost;
         }else{
           for(int d = allocatedInDay; d < dayLost; d++){
             int hotelAuction = agent.getAuctionFor(TACAgent.CAT_HOTEL, allocatedHotelType, d);
             agent.setAllocation(hotelAuction, agent.getAllocation(hotelAuction) -1);
+            unwantedPrices[hotelAuction] = prices[hotelAuction];
           }
           allocatedInDay = dayLost + 1;
         }
