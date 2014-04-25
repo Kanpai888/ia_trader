@@ -360,21 +360,7 @@ public class Phobos extends AgentImpl {
 
           // Check if the hotel is availible for this client
           if(ownedAvailible == 0){
-            // Client's allocated trip is not feasible as we do not own enough hotels
-
-            // Check if the client already has any hotels booked
-            // if(!clients[i].hasOwnedHotelAllocation()){
-              // Check if other hotel is feasible
-
-              // Remember to change the allocation table
-              // Remember to hold on bidding on hotels that are no longer in
-              // the allocation table
-
-            // }else{
-              // Shorten trip
-              // Remember to change the allocation table
-              clients[i].shortenTrip(auctionDay);
-            // }
+            clients[i].shortenTrip(auctionDay);
           }else{
             clients[i].addOwnedHotelAllocation(auctionDay);
             ownedAvailible--; 
@@ -383,7 +369,6 @@ public class Phobos extends AgentImpl {
           // Check if there is a newly completed trip
           if(clients[i].hasHotelFulfilled()){
             // Buy flight
-            // clientHotelFulfilled(i);
             log.fine("Client "+i+" has hotels fufilled");
           }
         }
