@@ -636,10 +636,10 @@ public class Phobos extends AgentImpl {
       this.allocatedHotelType = allocatedHotelType;
       this.allocatedInDay = allocatedInDay;
       this.allocatedOutDay = allocatedOutDay;
-          
-      this.entertainmentAlligator = agent.getClientPreference(this.clientID, TACAgent.E1);
-      this.entertainmentAmusement = agent.getClientPreference(this.clientID, TACAgent.E2);
-      this.entertainmentMuseum = agent.getClientPreference(this.clientID, TACAgent.E3);
+      //set entertainment bonuses
+      this.entertainmentBonusAlligator = agent.getClientPreference(this.clientID, TACAgent.E1);
+      this.entertainmentBonusAmusement = agent.getClientPreference(this.clientID, TACAgent.E2);
+      this.entertainmentBonusMuseum = agent.getClientPreference(this.clientID, TACAgent.E3);
     }
 
     public boolean hasHotelFulfilled(){
