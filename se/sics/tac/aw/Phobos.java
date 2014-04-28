@@ -650,6 +650,12 @@ public class Phobos extends AgentImpl {
     
     //get the bonus for winning a specific entertainment auction
     public int getBonusForEntertainment(int auction) {
+      
+      //if auction is outside of the client's stay
+      if (agent.getAuctionDay(auction) >= allocatedInDay && agent.getAuctionDay(auction) <= allocatedOutDay) {
+        return 0;
+      }
+      
       //compare previous allocation to new allocation
       for (int i : allocatedEntertainmentIDs) {
       
