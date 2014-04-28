@@ -366,6 +366,7 @@ public class Phobos extends AgentImpl {
     private ArrayList<Trip> possibleTrips;
     private boolean[] ownedHotels;
     // TODO: Need some structure to store owned flights
+    // TODO : Need some structure for price paid on items owned, with methods for trip to access
 
     public Client(int clientNumber) {
       // Initialise vars
@@ -392,6 +393,9 @@ public class Phobos extends AgentImpl {
         }
       }
     }
+
+    // TODO: Add method when hotel auction closes. If no rooms owned, delete trips
+    // using that hotel from possibleTrips ArrayList
 
     public void updateTripCosts(int auctionNumber, float price) {
       // TODO: Don't update if it's under owned hotels or flights
@@ -504,6 +508,8 @@ public class Phobos extends AgentImpl {
 
       // Ideally we'd have something about the entertainment here, but I have
       // no idea what to do with that. Maybe Ryan can add something?
+
+      // TODO: Add concept of subtracting cost of items bought, but not used in this trip
 
       // Calculate the overall utility of this trip
       return 1000 - travelPenalty1 - travelPenalty2 - inFlightPrice - outFlightPrice - hotelCost + hotelBonus;
