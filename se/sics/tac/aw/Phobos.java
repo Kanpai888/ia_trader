@@ -149,9 +149,10 @@ public class Phobos extends AgentImpl {
 
   private ArrayList<Client> clients;
 
+  // TODO: Need some structure to store purchased hotels that are no longer needed
+
   protected void init(ArgEnumerator args) {
     prices = new float[agent.getAuctionNo()];
-    clients = new ArrayList<Client>();
   }
 
   // New information about the quotes on the auction (quote.getAuction())
@@ -219,7 +220,7 @@ public class Phobos extends AgentImpl {
   // game is available (preferences etc).
   public void gameStarted() {
     log.fine("Game " + agent.getGameID() + " started!");
-
+    clients = new ArrayList<Client>();
     calculateAllocation();
     sendBids();
   }
@@ -363,10 +364,13 @@ public class Phobos extends AgentImpl {
     private int preferredOutFlight;
     private int hotelBonus;
     private ArrayList<Trip> possibleTrips;
+    private boolean[] ownedHotels;
+    // TODO: Need some structure to store owned flights
 
     public Client(int clientNumber) {
       // Initialise vars
       possibleTrips = new ArrayList<Trip>();
+      ownedHotels = new boolean[5];
 
       this.clientNumber = clientNumber;
       // Use client number to get and store preferences
@@ -390,6 +394,7 @@ public class Phobos extends AgentImpl {
     }
 
     public void updateTripCosts(int auctionNumber, float price) {
+      // TODO: Don't update if it's under owned hotels or flights
       for (Trip t : possibleTrips) {
         t.updateCosts(auctionNumber, price);
       }
@@ -404,6 +409,13 @@ public class Phobos extends AgentImpl {
         }
       }
       return currentHighest;
+    }
+
+    // TODO: function checks if client trip has been fulfilled. If so, removes
+    // it from clients ArrayList and leaves unused hotels/flights in some structure
+    // at the agent level
+    public void checkIfFulfilled() {
+
     }
 
     public int getInFlight() { return preferredInFlight; }
@@ -441,11 +453,28 @@ public class Phobos extends AgentImpl {
       this.utility = calculateUtility();
     }
 
-    // An update has been pushed about the costs for this trip
+    // An update has been pushed about the costs for this trip. Auction number
+    // isn't the best way to do this, but can't think of anything else
     public void updateCosts(int auctionNumber, float price) {
       // Check the auctionNumber applies to one of the items on this trip
-
       // If so, update that cost
+      int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, inFlight);
+      if (auctionNumber == auction) {
+        inFlightPrice = price; // inFlight price has updated
+      }
+
+      auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
+      if (auctionNumber == auction) {
+        outFlightPrice = price; // inFlight price has updated
+      }
+
+      // Now check the auctions for all the hotels
+      for (int i = inFlight; i < outFlight; ++i) {
+        auction = agent.getAuctionFor(TACAgent.CAT_HOTEL, hotelType, i);
+        if (auctionNumber == auction) {
+          hotelPrices[i] = price;
+        }
+      }
 
       calculateUtility(); // Recalcuate the utility with the new prices
     }
