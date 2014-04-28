@@ -616,7 +616,7 @@ public class Phobos extends AgentImpl {
 
   // Helper class
   public class Client{
-
+    
     private int clientID;
     private ArrayList<Integer> ownedHotelDaysAllocated = new ArrayList<Integer>();
     // These are the days I've actually request to be bought
@@ -643,8 +643,39 @@ public class Phobos extends AgentImpl {
       this.entertainmentBonusMuseum = agent.getClientPreference(this.clientID, TACAgent.E3);
     }
     
-    public void AllocateEntertainment(int entertainmentId) {
-      allocatedEntertainmentIds.add(entertainmentId);
+    //allocate an entertainment id
+    public void allocateEntertainment(int auction) {
+      allocatedEntertainmentIds.add(auction);
+    }
+    
+    //get the bonus for winning a specific entertainment auction
+    public int getBonusForEntertainment(int auction) {
+      //compare previous allocation to new allocation
+      for (int i : allocatedEntertainmentIDs) {
+      
+        if (agent.getAuctionDay(i) == agent.getAuctionDay(auction)) {
+          return 0; //allocation already exists on this day
+        }
+        
+        if (agent.getAuctionType(auction) == agent.getAuctionType(i)) {
+          return 0; //this type of entertainment already allocated
+        }
+      }
+      
+      //get return values
+      switch (agent.getAuctionType(auction)) {
+        case TACAgent.TYPE_ALLIGATOR_WRESTLING:
+          return this.entertainmentBonusAlligator;
+        
+        case TACAgent.TYPE_AMUSEMENT:
+          return this.entertainmentBonusAmusement;
+          
+        case TACAgent.TYPE_MUSEUM:
+          return this.entertainmentBonusMuseum;
+          
+        default:
+          return 0; //not an entertainment auction
+      }
     }
 
     public boolean hasHotelFulfilled(){
