@@ -387,7 +387,6 @@ public class Phobos extends AgentImpl {
 
         }
       }
-
     }
 
     // Return the trip with the highest utility
@@ -403,6 +402,7 @@ public class Phobos extends AgentImpl {
 
     public int getInFlight() { return preferredInFlight; }
     public int getOutFlight() { return preferredOutFlight; }
+    public int getHotelBonus() { return hotelBonus; }
 
   } // Client
 
@@ -423,20 +423,43 @@ public class Phobos extends AgentImpl {
     }
 
     private int calculateUtility() {
+      float[] estimatedHotelPrices;
+      int hotelCost = 0;
       int result = 0;
       // Get the clients preferred dates and hotel bonus
+      int preferredInFlight = client.getInFlight();
+      int preferredOutFlight = client.getOutFlight();
+      int hotelBonus = client.getHotelBonus();
 
       // Calculate the penalty when using these flight dates
+      int travelPenalty1 = (inFlight - preferredInFlight) * 100;
+      int travelPenalty2 = (preferredOutFlight - outFlight) * 100;
 
       // Get the cost of these flights at this point in time
+      // TODO: need to implement this properly. Need to know when this is called
+      // so can check whether flight prices are actually available
+      int flightCosts = 500;
 
       // Add up the expected cost of these hotel rooms
+      if (hotelType == TACAgent.TYPE_GOOD_HOTEL) {
+        estimatedHotelPrices = expensiveHotelEstimates;
+      } else {
+        estimatedHotelPrices = cheapHotelEstimates;
+      }
+      for (int i = inFlight; i < outFlight; ++i) {
+        hotelCost += estimatedHotelPrices[i];
+      }
 
-      // Add the hotel bonus if it applies here
+      // Negate the hotel bonus if using the cheap hotel
+      if (hotelType != TACAgent.TYPE_GOOD_HOTEL) {
+        hotelBonus = 0;
+      }
+
+      // Ideally we'd have something about the entertainment here, but I have
+      // no idea what to do with that. Maybe Ryan can add something?
 
       // Calculate the overall utility of this trip
-
-      return result;
+      return 1000 - travelPenalty1 - travelPenalty2 - flightCosts - hotelCost + hotelBonus;
     }
 
     public int getUtility() { return utility; }
