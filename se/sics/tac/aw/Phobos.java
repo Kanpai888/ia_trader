@@ -146,6 +146,9 @@ public class Phobos extends AgentImpl {
   private float[] prices;
   private float[] previousPrices;
 
+  // Lowest price we can bid for rooms that we no longer want
+  private float[] unwantedPrices;
+
   // Array to show the difference between the current and last price of auctions
   private float[] trends;
 
@@ -158,6 +161,9 @@ public class Phobos extends AgentImpl {
   private int flightPriceCounter;
   private int flightPriceDay;
 
+  private Client[] clients;
+  private ArrayList<Integer> closedAuctions;
+
   protected void init(ArgEnumerator args) {
     prices = new float[agent.getAuctionNo()];
     previousPrices = new float[agent.getAuctionNo()];
@@ -167,6 +173,9 @@ public class Phobos extends AgentImpl {
     flightPrices = new float[4][54];
     flightPriceCounter = 0;
     flightPriceDay = 0;
+
+    clients = new Client[8];
+    closedAuctions = new ArrayList<Integer>();
   }
 
   // New information about the quotes on the auction (quote.getAuction())
@@ -183,13 +192,13 @@ public class Phobos extends AgentImpl {
       trends[auction] = quote.getAskPrice() - previousPrices[auction];
       previousPrices[auction] = quote.getAskPrice();
 
-      if (alloc > 0 && trends[auction] > 0 && agent.getGameTime() > 15000) {
+      if (alloc > 0 && trends[auction] > 0 && buyFlights.get(auction) > 0) {
         // Price is going up after initial set, so buy
         Bid bid = new Bid(auction);
-        bid.addBidPoint(alloc, 1000);
+        bid.addBidPoint(buyFlights.get(auction), 1000);
         agent.submitBid(bid);
-        log.fine("*** Submitted bid for inflight at price " + quote.getAskPrice() + 
-          " with trend " + trends[auction]);
+
+        buyFlights.put(auction, 0); // Reset buyFlights HashMap for that auction
       }
 
       // Failsafe, in case the price has never gone up, buy with 20 seconds left
@@ -240,7 +249,16 @@ public class Phobos extends AgentImpl {
       if (alloc > 0 && quote.hasHQW(agent.getBid(auction)) && quote.getHQW() < alloc) {
         Bid bid = new Bid(auction);
         // Can not own anything in hotel auctions...
+
+        // Number of this type that we no longer want, cannot reduce number of rooms being bid on.
+        // So we want to pay as little as possible
+        int numUnwanted = quote.getBid().getQuantity() - alloc;
+        if(numUnwanted > 0){
+          bid.addBidPoint(numUnwanted, unwantedPrices[auction]);
+        }
+
         prices[auction] = quote.getAskPrice() + 50;
+
         bid.addBidPoint(alloc, prices[auction]);
         if (DEBUG) {
           // log.finest("submitting bid with alloc=" + agent.getAllocation(auction) + " own=" + agent.getOwn(auction));
@@ -269,13 +287,13 @@ public class Phobos extends AgentImpl {
   // category has arrived (quotes for a specific type of auctions are
   // often requested at once).
   public void quoteUpdated(int auctionCategory) {
-    log.fine("All quotes for " + agent.auctionCategoryToString(auctionCategory) + " has been updated");
+    //log.fine("All quotes for " + agent.auctionCategoryToString(auctionCategory) + " has been updated");
   }
 
   // There are TACAgent have received an answer on a bid query/submission
   // (new information about the bid is available)
   public void bidUpdated(Bid bid) {
-    log.fine("Bid Updated: id=" + bid.getID() + " auction=" + bid.getAuction() + " state=" + bid.getProcessingStateAsString() + " stateID=" + bid.getProcessingState());
+    // log.fine("Bid Updated: id=" + bid.getID() + " auction=" + bid.getAuction() + " state=" + bid.getProcessingStateAsString() + " stateID=" + bid.getProcessingState());
     // log.fine("       Hash: " + bid.getBidHash());
   }
 
@@ -302,12 +320,12 @@ public class Phobos extends AgentImpl {
   // The current game has ended
   public void gameStopped() {
     // Output the list of flight prices
-    log.fine("**************** Outputting Flight Prices ****************");
-    log.fine("Update\tDay 1\tDay 2\tDay 3\tDay 4");
+    // log.fine("**************** Outputting Flight Prices ****************");
+    // log.fine("Update\tDay 1\tDay 2\tDay 3\tDay 4");
 
-    for (int i = 0; i < 54; ++i) {
-      log.fine(i + " \t" + flightPrices[0][i] + "\t" + flightPrices[1][i] + "\t" + flightPrices[2][i] + "\t" + flightPrices[3][i]);
-    }
+    // for (int i = 0; i < 54; ++i) {
+    //   log.fine(i + " \t" + flightPrices[0][i] + "\t" + flightPrices[1][i] + "\t" + flightPrices[2][i] + "\t" + flightPrices[3][i]);
+    // }
 
     // Reset flight logging vars
     flightPriceCounter = 0;
@@ -316,9 +334,68 @@ public class Phobos extends AgentImpl {
     log.fine("Game Stopped!");
   }
 
+ 
+
+
+  
+
   // The auction with id "auction" has closed
   public void auctionClosed(int auction) {
     log.fine("*** Auction " + auction + " closed!");
+    closedAuctions.add(auction);
+
+    // Handle hotel auction closing
+    if(agent.getAuctionCategory(auction) == TACAgent.CAT_HOTEL){
+      int auctionDay = agent.getAuctionDay(auction);
+      int hotelType = agent.getAuctionType(auction);
+      int auctionOwn = agent.getOwn(auction);
+      int ownedAvailible = auctionOwn;
+
+      log.fine("A hotel auction no-"+auction+" has closed");
+      log.fine("It was type "+hotelType);
+      int alloc = agent.getAllocation(auction);
+      log.fine("We won "+auctionOwn+", we wanted "+alloc);
+
+      // Check which allocations are not feasible
+      for (int i = 0; i < 8; i++) {
+        int prefInFlight = agent.getClientPreference(i, TACAgent.ARRIVAL);
+        int prefOutFlight = agent.getClientPreference(i, TACAgent.DEPARTURE);
+
+        // We ignore clients that are already sorted with hotel arrangements
+        if(clients[i].hasHotelFulfilled()){
+          // log.fine("Skip client "+i+" as trip has been fufilled");
+          continue;
+        }
+
+        // Check if this breaks any prefered travel plans
+        if(clients[i].hotelWanted(auctionDay, hotelType)){
+
+          // Check if the hotel is availible for this client
+          if(ownedAvailible == 0){
+            clients[i].shortenTrip(auctionDay);
+          }else{
+            clients[i].addOwnedHotelAllocation(auctionDay);
+            ownedAvailible--; 
+          }
+
+          // Check if there is a newly completed trip
+          if(clients[i].hasHotelFulfilled()){
+            // Buy flight
+            log.fine("Client "+i+" has hotels fufilled");
+          }
+        }
+        
+        
+
+        // Allocate a hotel night for each day that the client stays
+        // for(int d = inFlight; d < outFlight; d++) {
+        //   auction = agent.getAuctionFor(TACAgent.CAT_HOTEL, type, d);
+        //   log.finer("Adding hotel for day: " + d + " on " + auction);
+        //   agent.setAllocation(auction, agent.getAllocation(auction) + 1);
+        // }
+      }
+      
+    }
   }
 
   // Sends initial bids
@@ -384,10 +461,10 @@ public class Phobos extends AgentImpl {
       // going to buy tickets for these days. (inflight=1, outflight=0)
       int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, inFlight);
       agent.setAllocation(auction, agent.getAllocation(auction) + 1);
+      buyFlights.put(auction, 0); // Add the key to the HashMap
       auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
       agent.setAllocation(auction, agent.getAllocation(auction) + 1);
-
-      buyFlights.put(auction, 0);
+      buyFlights.put(auction, 0); // Add the key to the HashMap
 
       // Check the value of bonus for each day of stay and compare to a threshold
       // expensive hotel (type = 1)
@@ -397,6 +474,8 @@ public class Phobos extends AgentImpl {
       } else {
         type = TACAgent.TYPE_CHEAP_HOTEL;
       }
+      // Keeping track of which client should be allocated the good hotel
+      clients[i] = new Client(i, type, inFlight, outFlight);
       // Allocate a hotel night for each day that the client stays
       for (int d = inFlight; d < outFlight; d++) {
         auction = agent.getAuctionFor(TACAgent.CAT_HOTEL, type, d);
@@ -440,9 +519,48 @@ public class Phobos extends AgentImpl {
     return -1;
   }
 
+  /* Method called when all the required hotels for a client have been bought.
+   * Adds the inbound and outbound flights for a client to the monitor list and
+   * buys them when it notices the price start to increase */
   private void clientHotelFulfilled(int clientNo) {
+    int inFlight = agent.getClientPreference(clientNo, TACAgent.ARRIVAL);
     int outFlight = agent.getClientPreference(clientNo, TACAgent.DEPARTURE);
-    int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
+    int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, inFlight);
+    Bid bid;
+
+    // Buy the flight if the price is currently rising, otherwise wait and
+    // monitor as usual
+    if (trends[auction] > 0) { // The price is going up
+      bid = new Bid(auction);
+      bid.addBidPoint(1, 1000);
+      agent.submitBid(bid);
+    } else {
+      // The price is going down, so add it to the HashMap and buy at
+      // lowest price
+      buyFlights.put(auction, buyFlights.get(auction) + 1);
+    }
+
+    // Now repeat for the return flight
+    auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
+    if (trends[auction] > 0) { // The price is going up
+      bid = new Bid(auction);
+      bid.addBidPoint(1, 1000);
+      agent.submitBid(bid);
+    } else {
+      buyFlights.put(auction, buyFlights.get(auction) + 1);
+    }
+  }
+
+  // NEED TO CHANGE, trips could be shortended from either start or end day
+  // day is a value from 1 to 4
+  private void buyOutFlight(int day) {
+    log.fine("Monitor out flight for day "+day);
+    // Change the allocation table
+    // int outFlight = agent.getClientPreference(clientNo, TACAgent.DEPARTURE);
+    // int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
+    // agent.setAllocation(auction, agent.getAllocation(auction) - 1);
+    int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, day);
+    // agent.setAllocation(auction, agent.getAllocation(auction) + 1);
 
     // Buy the flight if the price is currently rising, otherwise wait and
     // monitor as usual
@@ -453,18 +571,21 @@ public class Phobos extends AgentImpl {
     } else {
       // The price is going down, so add it to the HashMap and buy at
       // lowest price
-      buyFlights.put(auction, buyFlights.get(auction) + 1);
+      if (buyFlights.get(auction) != null) {
+        buyFlights.put(auction, buyFlights.get(auction) + 1);
+      } else {
+        buyFlights.put(auction, 1);
+      }
     }
   }
 
-  // day is a value from 1 to 4
-  private void clientTripShortend(int clientNo, int day) {
-    // Change the allocation table
-    int outFlight = agent.getClientPreference(clientNo, TACAgent.DEPARTURE);
-    int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
-    agent.setAllocation(auction, agent.getAllocation(auction) - 1);
-    auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, day);
-    agent.setAllocation(auction, agent.getAllocation(auction) + 1);
+  private void buyInFlight(int day) {
+    log.fine("Monitor in flight for day "+day);
+    // int inFlight = agent.getClientPreference(clientNo, TACAgent.ARRIVAL);
+    // int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, inFlight);
+    // agent.setAllocation(auction, agent.getAllocation(auction) - 1);
+    int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, day);
+    // agent.setAllocation(auction, agent.getAllocation(auction) + 1);
 
     // Buy the flight if the price is currently rising, otherwise wait and
     // monitor as usual
@@ -493,4 +614,249 @@ public class Phobos extends AgentImpl {
     TACAgent.main(args);
   }
 
+  // Helper class
+  public class Client{
+
+    private int clientID;
+    private ArrayList<Integer> ownedHotelDaysAllocated = new ArrayList<Integer>();
+    // These are the days I've actually request to be bought
+    private ArrayList<Integer> requestedInboundFlights = new ArrayList<Integer>();
+    private ArrayList<Integer> requestedOutboundFlights = new ArrayList<Integer>();
+    private int allocatedHotelType;
+    // The days may differ from their preferred days
+    private int allocatedInDay;
+    private int allocatedOutDay;
+
+    public Client(int clientID, int allocatedHotelType, int allocatedInDay, int allocatedOutDay){
+      this.clientID = clientID;
+      this.allocatedHotelType = allocatedHotelType;
+      this.allocatedInDay = allocatedInDay;
+      this.allocatedOutDay = allocatedOutDay;
+    }
+
+    public boolean hasHotelFulfilled(){
+      boolean isComplete = true;
+      for(int k=allocatedInDay; k<allocatedOutDay; k++){
+        if(!ownedHotelDaysAllocated.contains(k)){
+          isComplete = false;
+        }
+      }
+      return isComplete;
+    }
+
+    public boolean hasOwnedHotelAllocation(){
+      if(ownedHotelDaysAllocated.size() > 0){
+        return true;
+      }else{
+        return false;
+      }
+    }
+
+    // AKA we won a hotel bid
+    public void addOwnedHotelAllocation(int day){
+      ownedHotelDaysAllocated.add(day);
+      
+      // Buy flights if day is at the edge of the allocated trip
+      if(day == allocatedInDay){
+        requestedInboundFlights.add(allocatedInDay);
+        buyInFlight(allocatedInDay);
+      }
+      if(day == allocatedOutDay - 1){
+        requestedInboundFlights.add(allocatedOutDay);
+        buyOutFlight(allocatedOutDay);
+      }
+    }
+
+    public int getAllocatedHotelType(){
+      return allocatedHotelType;
+    }
+
+    public int getAllocatedInDay(){
+      return allocatedInDay;
+    }
+
+    public int getAllocatedOut(){
+      return allocatedOutDay;
+    }
+
+    public boolean hotelWanted(int day, int hotelType){
+      if(allocatedInDay <= day && day < allocatedOutDay 
+          && allocatedHotelType == hotelType){
+        return true;
+      }
+      return false;
+    }
+
+    // AKA we lost a hotel bid
+    public void shortenTrip(int dayLost){
+      
+      if(ownedHotelDaysAllocated.size() == 0){
+        // Try to switch hotels
+        boolean isViable = true;
+        int otherHotelType;
+        if(allocatedHotelType == TACAgent.TYPE_GOOD_HOTEL){
+          otherHotelType = TACAgent.TYPE_CHEAP_HOTEL;
+        }else{
+          otherHotelType = TACAgent.TYPE_GOOD_HOTEL;
+        }
+
+        for(int v = allocatedInDay; v < allocatedOutDay; v++){
+          int hotelAuction = agent.getAuctionFor(TACAgent.CAT_HOTEL, otherHotelType, v);
+          if(closedAuctions.contains(hotelAuction)){
+            isViable = false;
+          }
+        }
+
+        if(isViable){
+          log.fine("Attempting to switch hotels for "+clientID);
+          int hotelAuction;
+          for(int k = allocatedInDay; k < allocatedOutDay; k++){
+            // Removing old allocation
+            hotelAuction = agent.getAuctionFor(TACAgent.CAT_HOTEL, allocatedHotelType, k);
+            agent.setAllocation(hotelAuction, agent.getAllocation(hotelAuction) - 1);
+            unwantedPrices[hotelAuction] = prices[hotelAuction];
+
+            hotelAuction = agent.getAuctionFor(TACAgent.CAT_HOTEL, otherHotelType, k);
+            agent.setAllocation(hotelAuction, agent.getAllocation(hotelAuction) + 1);
+          }
+          allocatedHotelType = otherHotelType;
+
+          // If switch is possible, then switch,
+          // Otherwise the method does not return and will shorten the trip instead
+          return;
+        }
+      }
+
+      log.fine("Attempting to shorten trip for "+clientID);
+      // Check if left most hotel day
+      if(dayLost == allocatedInDay){
+        log.fine("Attempting to shorten trip, lost left most day");
+        if(dayLost + 1 == allocatedOutDay){
+          log.fine("Client "+clientID+" cannot fufilled trip due to hotels");
+          return;
+        } 
+        if(ownedHotelDaysAllocated.contains(dayLost + 1)){
+          // Remove old flight alllocation
+          int oldAuction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, allocatedInDay);
+          agent.setAllocation(oldAuction, agent.getAllocation(oldAuction) - 1 );
+
+          // We own the left most hotel for this trip, buy inbound flight
+          allocatedInDay = allocatedInDay + 1;
+          int inAuction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, allocatedInDay);
+          agent.setAllocation(inAuction, agent.getAllocation(inAuction) + 1 );
+          
+          // Call james's code to buy flight
+          requestedInboundFlights.add(allocatedInDay);
+          buyInFlight(allocatedInDay);
+
+          return;
+        }
+        // Check if there is a open auction availible
+        int hotelAuction = agent.getAuctionFor(TACAgent.CAT_HOTEL, allocatedHotelType, dayLost + 1);
+        if(!closedAuctions.contains(hotelAuction)){
+          allocatedInDay = allocatedInDay + 1;
+          return;
+        }else{
+          log.fine("ERROR - Should not reach. There is a closed auction between an allocated trip");
+        }
+
+
+      // Check if right most hotel day (no hotel needed on last day)
+      }else if(dayLost == allocatedOutDay - 1){
+        log.fine("Attempting to shorten trip, lost right most day");
+        if(dayLost - 1 == allocatedInDay){
+          log.fine("Client "+clientID+" cannot fufilled trip due to hotels");
+          return;
+        } 
+        if(ownedHotelDaysAllocated.contains(dayLost - 1)){
+          // Remove old flight alllocation
+          int oldAuction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, allocatedOutDay);
+          agent.setAllocation(oldAuction, agent.getAllocation(oldAuction) - 1 );
+
+          // We own the right most hotel for this trip, buy outbound flight and ammend allocation
+          allocatedOutDay = allocatedOutDay - 1;
+          int outAuction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, allocatedOutDay);
+          agent.setAllocation(outAuction, agent.getAllocation(outAuction) + 1 );
+
+          // Call james's code to buy flight
+          requestedOutboundFlights.add(allocatedOutDay);
+          buyOutFlight(allocatedOutDay);
+
+          return;
+        }
+        int hotelAuction = agent.getAuctionFor(TACAgent.CAT_HOTEL, allocatedHotelType, dayLost - 1);
+        if(!closedAuctions.contains(hotelAuction)){
+          // Set new start day
+          allocatedOutDay = dayLost;
+          return;
+        }else{
+          log.fine("ERROR - Should not reach. There is a closed auction between an allocated trip");
+        }
+
+
+      // Check if in the middle of an allocated trip
+      }else if(allocatedInDay < dayLost && dayLost < allocatedOutDay -1){
+
+        log.fine("Attempting to shorten trip, a middle day");
+        
+        // Calculate best remainder trip, we can assume that everything between allocatedInDay
+        // and allocatedOutDay except dayLost is a open auction or we own the hotel room. 
+        int leftDuration = dayLost - allocatedInDay;
+        int rightDuration = allocatedOutDay - 1 - dayLost;
+        boolean leftIsBest = true;
+
+        if(leftDuration > rightDuration){
+          leftIsBest = true;
+        }else if(leftDuration < rightDuration) {
+          leftIsBest = false;
+        }else if(leftDuration == rightDuration){
+          if(requestedInboundFlights.contains(allocatedInDay)){
+            // Bias towards side that has a flight purchased in even duration
+            leftIsBest = true;
+          }else if(requestedOutboundFlights.contains(allocatedOutDay)){
+            leftIsBest = false;
+          }else if(dayLost == 1){
+            // In this scenerio, buying day 0 is likely cheaper than buying day 2
+            leftIsBest = true;
+          }else if(dayLost == 2){
+            leftIsBest = false;
+          }
+        }
+
+        if(leftIsBest){
+          // Remove uneeded hotel allocations
+          for(int d = dayLost + 1; d < allocatedOutDay; d++){
+            int hotelAuction = agent.getAuctionFor(TACAgent.CAT_HOTEL, allocatedHotelType, d);
+            agent.setAllocation(hotelAuction, agent.getAllocation(hotelAuction) -1);
+            unwantedPrices[hotelAuction] = prices[hotelAuction];
+          }
+          allocatedOutDay = dayLost;
+        }else{
+          for(int d = allocatedInDay; d < dayLost; d++){
+            int hotelAuction = agent.getAuctionFor(TACAgent.CAT_HOTEL, allocatedHotelType, d);
+            agent.setAllocation(hotelAuction, agent.getAllocation(hotelAuction) -1);
+            unwantedPrices[hotelAuction] = prices[hotelAuction];
+          }
+          allocatedInDay = dayLost + 1;
+        }
+
+        if(hasHotelFulfilled()){
+          // If this completes the trip, then we need to buy the missing 
+          if(!requestedInboundFlights.contains(allocatedInDay)){
+
+            // Call james's code to buy flight
+            requestedInboundFlights.add(allocatedInDay);
+            buyInFlight(allocatedInDay);
+          }
+          if(!requestedOutboundFlights.contains(allocatedOutDay)){
+
+            // Call james's code to buy flight
+            requestedOutboundFlights.add(allocatedOutDay);
+            buyOutFlight(allocatedOutDay);
+          }
+        }
+      }
+      
+    }
+  }
 } // DummyAgent
