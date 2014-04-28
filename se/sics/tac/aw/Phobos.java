@@ -389,6 +389,12 @@ public class Phobos extends AgentImpl {
       }
     }
 
+    public void updateTripCosts(int auctionNumber, float price) {
+      for (Trip t : possibleTrips) {
+        t.updateCosts(auctionNumber, price);
+      }
+    }
+
     // Return the trip with the highest utility
     public Trip getOptimalTrip() {
       Trip currentHighest = possibleTrips.get(0);
@@ -409,45 +415,57 @@ public class Phobos extends AgentImpl {
   public class Trip {
 
     private Client client;
-    private int utility;
+    private float utility;
     private int inFlight;
     private int outFlight;
     private int hotelType;
+    private float[] hotelPrices;
+    private float inFlightPrice;
+    private float outFlightPrice;
 
     public Trip(Client c, int inFlight, int outFlight, int hotelType) {
       this.client = client;
       this.inFlight = inFlight;
       this.outFlight = outFlight;
       this.hotelType = hotelType;
+
+      if (hotelType == TACAgent.TYPE_GOOD_HOTEL) {
+        hotelPrices = expensiveHotelEstimates;
+      } else {
+        hotelPrices = cheapHotelEstimates;
+      }
+
+      inFlightPrice = 0;
+      outFlightPrice = 0;
+
       this.utility = calculateUtility();
     }
 
-    private int calculateUtility() {
+    // An update has been pushed about the costs for this trip
+    public void updateCosts(int auctionNumber, float price) {
+      // Check the auctionNumber applies to one of the items on this trip
+
+      // If so, update that cost
+
+      calculateUtility(); // Recalcuate the utility with the new prices
+    }
+
+    private float calculateUtility() {
       float[] estimatedHotelPrices;
-      int hotelCost = 0;
-      int result = 0;
+      float hotelCost = 0;
+      float result = 0;
       // Get the clients preferred dates and hotel bonus
       int preferredInFlight = client.getInFlight();
       int preferredOutFlight = client.getOutFlight();
-      int hotelBonus = client.getHotelBonus();
+      float hotelBonus = client.getHotelBonus();
 
       // Calculate the penalty when using these flight dates
-      int travelPenalty1 = (inFlight - preferredInFlight) * 100;
-      int travelPenalty2 = (preferredOutFlight - outFlight) * 100;
-
-      // Get the cost of these flights at this point in time
-      // TODO: need to implement this properly. Need to know when this is called
-      // so can check whether flight prices are actually available
-      int flightCosts = 500;
+      float travelPenalty1 = (inFlight - preferredInFlight) * 100;
+      float travelPenalty2 = (preferredOutFlight - outFlight) * 100;
 
       // Add up the expected cost of these hotel rooms
-      if (hotelType == TACAgent.TYPE_GOOD_HOTEL) {
-        estimatedHotelPrices = expensiveHotelEstimates;
-      } else {
-        estimatedHotelPrices = cheapHotelEstimates;
-      }
       for (int i = inFlight; i < outFlight; ++i) {
-        hotelCost += estimatedHotelPrices[i];
+        hotelCost += hotelPrices[i];
       }
 
       // Negate the hotel bonus if using the cheap hotel
@@ -459,10 +477,10 @@ public class Phobos extends AgentImpl {
       // no idea what to do with that. Maybe Ryan can add something?
 
       // Calculate the overall utility of this trip
-      return 1000 - travelPenalty1 - travelPenalty2 - flightCosts - hotelCost + hotelBonus;
+      return 1000 - travelPenalty1 - travelPenalty2 - inFlightPrice - outFlightPrice - hotelCost + hotelBonus;
     }
 
-    public int getUtility() { return utility; }
+    public float getUtility() { return utility; }
     public int getInFlight() { return inFlight; }
     public int getOutFlight() { return outFlight; }
     public int getHotelType() { return hotelType; }
