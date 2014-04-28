@@ -124,6 +124,12 @@
  *
  */
 
+/*
+ * Hotel bidding: when deciding how much to bid for a hotel for a client,
+ * find the trip for that client with the highest utility that doesn't contain
+ * that hotel to determine max price to bid
+ */
+
 package se.sics.tac.aw;
 import se.sics.tac.util.ArgEnumerator;
 import java.util.logging.*;
@@ -455,6 +461,11 @@ public class Phobos extends AgentImpl {
       outFlightPrice = 0;
 
       this.utility = calculateUtility();
+    }
+
+    // TODO: create method to return whether a hotel is used in this trip or not
+    public boolean tripContainsHotel(int auctionNumber) {
+      return false;
     }
 
     // An update has been pushed about the costs for this trip. Auction number
