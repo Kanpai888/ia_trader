@@ -399,17 +399,35 @@ public class Phobos extends AgentImpl {
 
   public class Trip {
 
+    private Client client;
     private int utility;
     private int inFlight;
     private int outFlight;
     private int hotelType;
 
-    public Trip() {
-      calculateUtility();
+    public Trip(Client c, int inFlight, int outFlight, int hotelType) {
+      this.client = client;
+      this.inFlight = inFlight;
+      this.outFlight = outFlight;
+      this.hotelType = hotelType;
+      this.utility = calculateUtility();
     }
 
-    private void calculateUtility() {
+    private int calculateUtility() {
+      int result = 0;
+      // Get the clients preferred dates and hotel bonus
 
+      // Calculate the penalty when using these flight dates
+
+      // Get the cost of these flights at this point in time
+
+      // Add up the expected cost of these hotel rooms
+
+      // Add the hotel bonus if it applies here
+
+      // Calculate the overall utility of this trip
+
+      return result;
     }
 
     public int getUtility() { return utility; }
