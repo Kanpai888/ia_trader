@@ -630,6 +630,7 @@ public class Phobos extends AgentImpl {
     private int entertainmentBonusAlligator;
     private int entertainmentBonusAmusement;
     private int entertainmentBonusMuseum;
+    private ArrayList<Integer> allocatedEntertainmentIds = new ArrayList<Integer>();
 
     public Client(int clientID, int allocatedHotelType, int allocatedInDay, int allocatedOutDay){
       this.clientID = clientID;
@@ -640,6 +641,10 @@ public class Phobos extends AgentImpl {
       this.entertainmentBonusAlligator = agent.getClientPreference(this.clientID, TACAgent.E1);
       this.entertainmentBonusAmusement = agent.getClientPreference(this.clientID, TACAgent.E2);
       this.entertainmentBonusMuseum = agent.getClientPreference(this.clientID, TACAgent.E3);
+    }
+    
+    public void AllocateEntertainment(int entertainmentId) {
+      allocatedEntertainmentIds.add(entertainmentId);
     }
 
     public boolean hasHotelFulfilled(){
