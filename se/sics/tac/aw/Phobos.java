@@ -127,6 +127,7 @@
 package se.sics.tac.aw;
 import se.sics.tac.util.ArgEnumerator;
 import java.util.logging.*;
+import java.util.ArrayList;
 
 public class Phobos extends AgentImpl {
 
@@ -137,8 +138,19 @@ public class Phobos extends AgentImpl {
 
   private float[] prices;
 
+  // Store hotel price estimates
+  private float[] cheapHotelEstimates = {
+    50, 70, 100, 50
+  };
+  private float[] expensiveHotelEstimates = {
+    100, 150, 300, 150
+  };
+
+  private ArrayList<Client> clients;
+
   protected void init(ArgEnumerator args) {
     prices = new float[agent.getAuctionNo()];
+    clients = new ArrayList<Client>();
   }
 
   // New information about the quotes on the auction (quote.getAuction())
@@ -266,11 +278,13 @@ public class Phobos extends AgentImpl {
   private void calculateAllocation() {
     // Loop through for each of the 8 clients
     for (int i = 0; i < 8; i++) {
+      
       int inFlight = agent.getClientPreference(i, TACAgent.ARRIVAL);
       int outFlight = agent.getClientPreference(i, TACAgent.DEPARTURE);
       int hotel = agent.getClientPreference(i, TACAgent.HOTEL_VALUE);
       int type;
 
+      /*
       // Get the flight preferences auction and remember that we are
       // going to buy tickets for these days. (inflight=1, outflight=0)
       int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, inFlight);
@@ -291,11 +305,15 @@ public class Phobos extends AgentImpl {
         log.finer("Adding hotel for day: " + d + " on " + auction);
         agent.setAllocation(auction, agent.getAllocation(auction) + 1);
       }
+      */
+      // Add the client to the ArrayList. Allocations will be dealt with later
+      clients.add(new Client(i));
 
+      // Not sure what to do about entertainment yet
       // Allocate a different entertainment for each day the client stays
       int eType = -1;
       while((eType = nextEntType(i, eType)) > 0) {
-        auction = bestEntDay(inFlight, outFlight, eType);
+        int auction = bestEntDay(inFlight, outFlight, eType);
         log.finer("Adding entertainment " + eType + " on " + auction);
         agent.setAllocation(auction, agent.getAllocation(auction) + 1);
       }
@@ -337,5 +355,28 @@ public class Phobos extends AgentImpl {
   public static void main (String[] args) {
     TACAgent.main(args);
   }
+
+  public class Client {
+    private int clientNumber;
+    private int preferredInFlight;
+    private int preferredOutFlight;
+    private int hotelBonus;
+
+    public Client(int clientNumber) {
+      this.clientNumber = clientNumber;
+      // Use client number to get and store preferences
+      this.preferredInFlight = agent.getClientPreference(clientNumber, TACAgent.ARRIVAL);
+      this.preferredOutFlight = agent.getClientPreference(clientNumber, TACAgent.DEPARTURE);
+      this.hotelBonus = agent.getClientPreference(clientNumber, TACAgent.HOTEL_VALUE);
+    }
+
+    public int getInFlight() { return preferredInFlight; }
+    public int getOutFlight() { return preferredOutFlight; }
+
+  } // Client
+
+  public class Trip {
+
+  } // Trip
 
 } // DummyAgent
