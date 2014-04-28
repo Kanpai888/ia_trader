@@ -128,6 +128,7 @@ package se.sics.tac.aw;
 import se.sics.tac.util.ArgEnumerator;
 import java.util.logging.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class Phobos extends AgentImpl {
 
@@ -361,13 +362,34 @@ public class Phobos extends AgentImpl {
     private int preferredInFlight;
     private int preferredOutFlight;
     private int hotelBonus;
+    private ArrayList<Trip> possibleTrips;
 
     public Client(int clientNumber) {
+      // Initialise vars
+      possibleTrips = new ArrayList<Trip>();
+
       this.clientNumber = clientNumber;
       // Use client number to get and store preferences
       this.preferredInFlight = agent.getClientPreference(clientNumber, TACAgent.ARRIVAL);
       this.preferredOutFlight = agent.getClientPreference(clientNumber, TACAgent.DEPARTURE);
       this.hotelBonus = agent.getClientPreference(clientNumber, TACAgent.HOTEL_VALUE);
+
+      buildClientTrips(); // Create permutations for the possible client trips
+    }
+
+    private void buildClientTrips() {
+
+    }
+
+    // Return the trip with the highest utility
+    public Trip getOptimalTrip() {
+      Trip currentHighest = possibleTrips.get(0);
+      for (Trip t : possibleTrips) {
+        if (t.getUtility() > currentHighest.getUtility()) {
+          currentHighest = t;
+        }
+      }
+      return currentHighest;
     }
 
     public int getInFlight() { return preferredInFlight; }
@@ -376,6 +398,24 @@ public class Phobos extends AgentImpl {
   } // Client
 
   public class Trip {
+
+    private int utility;
+    private int inFlight;
+    private int outFlight;
+    private int hotelType;
+
+    public Trip() {
+      calculateUtility();
+    }
+
+    private void calculateUtility() {
+
+    }
+
+    public int getUtility() { return utility; }
+    public int getInFlight() { return inFlight; }
+    public int getOutFlight() { return outFlight; }
+    public int getHotelType() { return hotelType; }
 
   } // Trip
 
