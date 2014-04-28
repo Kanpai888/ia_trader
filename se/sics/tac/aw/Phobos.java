@@ -378,6 +378,15 @@ public class Phobos extends AgentImpl {
     }
 
     private void buildClientTrips() {
+      for (int i = preferredInFlight; i < preferredOutFlight; ++i) {
+        for (int k = preferredOutFlight; k > i; --k) {
+          // Add a trip with the expensive hotel
+          possibleTrips.add(new Trip(this, i, k, TACAgent.TYPE_GOOD_HOTEL));
+          // and the cheap hotel
+          possibleTrips.add(new Trip(this, i, k, TACAgent.TYPE_CHEAP_HOTEL));
+
+        }
+      }
 
     }
 
