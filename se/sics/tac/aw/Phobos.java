@@ -227,8 +227,22 @@ public class Phobos extends AgentImpl {
     }
   }
 
-  // TODO: function to assign the items left in unusedItems
+  // Function to assign the items left in unusedItems
   private void assignUnusedItems() {
+    // Iterate through the HashMap. At each non-empty value, iterate through
+    // clients to see if anyone needs it
+    for (Integer k : unusedItems.keySet()) {
+      int quantity = unusedItems.get(k);
+      if (quantity > 0) {
+        for (Client c : clients) {
+          if (quantity > 0 && c.needsAuction(k)) {
+            --quantity;
+            c.assignAuctionItem(k, 1);
+          }
+        }
+        unusedItems.put(k, quantity); // Replace any un-needed unused items
+      }
+    }
 
   }
 
