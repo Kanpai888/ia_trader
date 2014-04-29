@@ -169,11 +169,14 @@ public class Phobos extends AgentImpl {
 
   // New information about the quotes on the auction (quote.getAuction())
   // has arrived
-  // TODO: update currentFlightPrices[] and estimatedHotelPrices[] when quoteUpdated
+  // TODO: update estimatedHotelPrices[] when quoteUpdated apart from those set to 9999 (closed auctions)
   public void quoteUpdated(Quote quote) {
     int auction = quote.getAuction();
     int auctionCategory = agent.getAuctionCategory(auction);
-    if (auctionCategory == TACAgent.CAT_HOTEL) {
+    if (auctionCategory == TACAgent.CAT_FLIGHT) {
+      currentFlightPrices[auction] = quote.getAskPrice(); // Update currentFlightPrices[]
+    }
+    else if (auctionCategory == TACAgent.CAT_HOTEL) {
       int alloc = agent.getAllocation(auction); // Allocation is number of items wanted from this auction
       /* If there are any to be won, and the Hypothetical Quantity Won is less than the amount needed */
       if (alloc > 0 && quote.hasHQW(agent.getBid(auction)) && quote.getHQW() < alloc) {
@@ -201,6 +204,21 @@ public class Phobos extends AgentImpl {
         }
         agent.submitBid(bid);
       }
+    }
+    // Recalculate the allocations
+    rebuildAllocations();
+  }
+
+  private void rebuildAllocations() {
+    // Clear allocation table
+
+    // Clear flights from monitoring
+
+    for (Client c : clients) {
+      Trip t = c.getOptimalTrip();
+      // Re-add items to allocation table if not owned
+
+      // Re-add flights to monitoring if not owned
     }
   }
 
@@ -249,6 +267,22 @@ public class Phobos extends AgentImpl {
 
   // The auction with id "auction" has closed
   public void auctionClosed(int auction) {
+    // When a hotel auction closes, change the estimated price to 9999 to
+    // prevent other clients using a trip with it
+    if (agent.getAuctionCategory(auction) == TACAgent.CAT_HOTEL) {
+      int day = agent.getAuctionDat(auction) - 1; // Need to subtract 1 as array starts at index 0
+      if (agent.getAuctionType(auction) == TACAgent.TYPE_GOOD_HOTEL) {
+        expensiveHotelEstimates[day] = 9999;
+      } else {
+        cheapHotelEstimates[day] = 9999;
+      }
+
+      // TODO: Assign the hotels to clients that want them
+      if (agent.getOwn(auction) > 0) {
+
+      }
+    }
+
     log.fine("*** Auction " + auction + " closed!");
   }
 
@@ -424,9 +458,6 @@ public class Phobos extends AgentImpl {
       log.fine("*** Client " + clientNumber + " has been allocated Auction ID " + auctionNumber + " sold at " + price);
     }
 
-    // TODO: Add method when hotel auction closes. If no rooms owned, delete trips
-    // using that hotel from possibleTrips ArrayList
-
     // Return the trip with the highest utility
     public Trip getOptimalTrip() {
       Trip currentHighest = possibleTrips.get(0);
@@ -577,7 +608,7 @@ public class Phobos extends AgentImpl {
     // Method to return whether a hotel is used in this trip or not. Will be used
     // to delete trip if auction closes for a hotel this trip needed, and none are
     // owned by the client
-    public boolean tripContainsHotel(int auctionNumber) { return auctions.contains(auctionNumber); }
+    public boolean containsHotel(int auctionNumber) { return auctions.contains(auctionNumber); }
 
     // Other getters
     public float getUtility() { return calculateUtility(); }
