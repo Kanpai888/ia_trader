@@ -157,6 +157,8 @@ public class Phobos extends AgentImpl {
   private ArrayList<Client> clients;
 
   // TODO: Need some structure to store purchased hotels/flights that are no longer needed
+  // TODO: Add some point optimum trip for client is set, and allocations are set
+  // TODO: Add flight monitoring to buy at cheapest price
 
   protected void init(ArgEnumerator args) {
     prices = new float[agent.getAuctionNo()];
