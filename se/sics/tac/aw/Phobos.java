@@ -139,11 +139,12 @@ import java.util.HashMap;
 public class Phobos extends AgentImpl {
 
   private static final Logger log =
-    Logger.getLogger(DummyAgent.class.getName());
+    Logger.getLogger(Phobos.class.getName());
 
   private static final boolean DEBUG = false;
 
   private float[] prices;
+  private float[] currentFlightPrices;
 
   // Store hotel price estimates
   private float[] cheapHotelEstimates = {
@@ -163,6 +164,7 @@ public class Phobos extends AgentImpl {
 
   // New information about the quotes on the auction (quote.getAuction())
   // has arrived
+  // TODO: update currentFlightPrices[] and estimatedHotelPrices[] when quoteUpdated
   public void quoteUpdated(Quote quote) {
     int auction = quote.getAuction();
     int auctionCategory = agent.getAuctionCategory(auction);
@@ -226,6 +228,7 @@ public class Phobos extends AgentImpl {
   // game is available (preferences etc).
   public void gameStarted() {
     log.fine("Game " + agent.getGameID() + " started!");
+    currentFlightPrices = new float[agent.getAuctionNo()]; // Reset flight prices array
     clients = new ArrayList<Client>();
     calculateAllocation();
     sendBids();
@@ -364,6 +367,12 @@ public class Phobos extends AgentImpl {
     TACAgent.main(args);
   }
 
+  /*
+   * Clients will contain multiple possible trips that will be valid for them,
+   * each of which will have an associated utility. Clients will also hold
+   * the auctions won, and the prices paid for those items, which trips can
+   * factor into the utility
+   */
   public class Client {
     private int clientNumber;
     private int preferredInFlight;
@@ -371,12 +380,11 @@ public class Phobos extends AgentImpl {
     private int hotelBonus;
     private ArrayList<Trip> possibleTrips;
     private float[] assignedAuctions; // Stores the price of all aucitons won for this client
-    // TODO : Need some structure for price paid on items owned, with methods for trip to access
 
     public Client(int clientNumber) {
       // Initialise vars
       possibleTrips = new ArrayList<Trip>();
-      ownedHotels = new boolean[5];
+      assignedAuctions = new float[agent.getAuctionNo()];
 
       this.clientNumber = clientNumber;
       // Use client number to get and store preferences
@@ -394,25 +402,16 @@ public class Phobos extends AgentImpl {
           possibleTrips.add(new Trip(this, i, k, TACAgent.TYPE_GOOD_HOTEL));
           // and the cheap hotel
           possibleTrips.add(new Trip(this, i, k, TACAgent.TYPE_CHEAP_HOTEL));
-
         }
       }
     }
 
     public void assignAuctionItem(int auctionNumber, float price) {
       assignedAuctions[auctionNumber] = price;
-      // TODO: Update the price for all the trips to the price paid
     }
 
     // TODO: Add method when hotel auction closes. If no rooms owned, delete trips
     // using that hotel from possibleTrips ArrayList
-
-    public void updateTripCosts(int auctionNumber, float price) {
-      // TODO: Don't update if it's under owned hotels or flights
-      for (Trip t : possibleTrips) {
-        t.updateCosts(auctionNumber, price);
-      }
-    }
 
     // Return the trip with the highest utility
     public Trip getOptimalTrip() {
@@ -446,9 +445,8 @@ public class Phobos extends AgentImpl {
     private int inFlight;
     private int outFlight;
     private int hotelType;
-    private float[] hotelPrices;
-    private float inFlightPrice;
-    private float outFlightPrice;
+    private ArrayList<Integer> auctions; // A list of the auctions used in this trip
+    private float[] estimatedHotelPrices;
 
     public Trip(Client c, int inFlight, int outFlight, int hotelType) {
       this.client = client;
@@ -457,56 +455,29 @@ public class Phobos extends AgentImpl {
       this.hotelType = hotelType;
 
       if (hotelType == TACAgent.TYPE_GOOD_HOTEL) {
-        hotelPrices = expensiveHotelEstimates;
+        estimatedHotelPrices = expensiveHotelEstimates;
       } else {
-        hotelPrices = cheapHotelEstimates;
+        estimatedHotelPrices = cheapHotelEstimates;
       }
 
-      inFlightPrice = 0;
-      outFlightPrice = 0;
+      // Add all the auction IDs used by trip to auctions ArrayList
+      auctions.add(agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, inFlight)); // InFlight
+      auctions.add(agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight)); //OutFlight
+      for (int i = inFlight; i < outFlight; ++i) {
+      	auctions.add(agent.getAuctionFor(TACAgent.CAT_HOTEL, hotelType, i));
+      }
 
       this.utility = calculateUtility();
     }
 
-    // Method to return whether a hotel is used in this trip or not
+    // Method to return whether a hotel is used in this trip or not. Will be used
+    // to delete trip if auction closes for a hotel this trip needed, and none are
+    // owned by the client
     public boolean tripContainsHotel(int auctionNumber) {
-      for (int i = inFlight; i < outFlight ++i) {
-        int auction = agent.getAuctionFor(TACAgent.CAT_HOTEL, hotelType, i);
-        if (auctionNumber == auction) {
-          return true;
-        }
-      }
-      return false;
-    }
-
-    // An update has been pushed about the costs for this trip. Auction number
-    // isn't the best way to do this, but can't think of anything else
-    public void updateCosts(int auctionNumber, float price) {
-      // Check the auctionNumber applies to one of the items on this trip
-      // If so, update that cost
-      int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, inFlight);
-      if (auctionNumber == auction) {
-        inFlightPrice = price; // inFlight price has updated
-      }
-
-      auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
-      if (auctionNumber == auction) {
-        outFlightPrice = price; // inFlight price has updated
-      }
-
-      // Now check the auctions for all the hotels
-      for (int i = inFlight; i < outFlight; ++i) {
-        auction = agent.getAuctionFor(TACAgent.CAT_HOTEL, hotelType, i);
-        if (auctionNumber == auction) {
-          hotelPrices[i] = price;
-        }
-      }
-
-      calculateUtility(); // Recalcuate the utility with the new prices
+      auctions.contains(auctionNumber) ? return true : return false;
     }
 
     private float calculateUtility() {
-      float[] estimatedHotelPrices;
       float hotelCost = 0;
       float result = 0;
       // Get the clients preferred dates and hotel bonus
@@ -514,16 +485,45 @@ public class Phobos extends AgentImpl {
       int preferredOutFlight = client.getOutFlight();
       float hotelBonus = client.getHotelBonus();
 
+      // Also get the items owned by the client, and the prices paid
+      float[] clientCosts = client.getAssignedAuctions();
+
       // Calculate the penalty when using these flight dates
-      float travelPenalty1 = (inFlight - preferredInFlight) * 100;
-      float travelPenalty2 = (preferredOutFlight - outFlight) * 100;
+      float travelPenalty = (inFlight - preferredInFlight) * 100;
+      travelPenalty += (preferredOutFlight - outFlight) * 100;
+
+      // Add up the expected cost of flights. If flights already owned by client
+      // use the price paid
+      float flightCost = 0;
+      int auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, inFlight);
+      if (clientCosts[auction]  > 0) {
+      	flightCost += clientCosts[auction];
+      } else {
+      	flightCost += currentFlightPrices[auction];
+      }
+
+      auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
+	  if (clientCosts[auction]  > 0) {
+      	flightCost += clientCosts[auction];
+      } else {
+      	flightCost += currentFlightPrices[auction];
+      }
 
       // Add up the expected cost of these hotel rooms
+      // If the client owns that hotel room, use the price paid. Otherwise, use
+      // the estimated price
       for (int i = inFlight; i < outFlight; ++i) {
-        hotelCost += hotelPrices[i];
+      	// Need to get auction number to check if client owns hotel
+      	int auction = agent.getAuctionFor(TACAgent.CAT_HOTEL, hotelType, i);
+      	if (clientCosts[auction] > 0) { // If the client already owns the hotel
+      	  hotelCost += clientCosts[auction];
+      	} else {// Don't own the hotel, use the estimated price
+      	  hotelCost += estimatedHotelPrices[i];
+      	}
       }
 
       // Negate the hotel bonus if using the cheap hotel
+      // TODO: Check if hotel bonus applies to every day in the trip
       if (hotelType != TACAgent.TYPE_GOOD_HOTEL) {
         hotelBonus = 0;
       }
@@ -531,10 +531,18 @@ public class Phobos extends AgentImpl {
       // Ideally we'd have something about the entertainment here, but I have
       // no idea what to do with that. Maybe Ryan can add something?
 
-      // TODO: Add concept of subtracting cost of items bought, but not used in this trip
+      // Concept of subtracting cost of items bought, but not used in this trip
+      // For every item in clientCosts, checks if auction is used in this trip. If not,
+      // it adds it to the cost of the trip
+      float alreadyBoughtCost = 0;
+      for (int i = 0; i < clientCosts.length; ++i) {
+      	if (i > 0 && !auctions.contains(i)) {
+      		alreadyBoughtCost += clientCosts[i];
+      	}
+      }
 
       // Calculate the overall utility of this trip
-      return 1000 - travelPenalty1 - travelPenalty2 - inFlightPrice - outFlightPrice - hotelCost + hotelBonus;
+      return 1000 - travelPenalty - flightCost - hotelCost + hotelBonus - alreadyBoughtCost;
     }
 
     public float getUtility() { return utility; }
