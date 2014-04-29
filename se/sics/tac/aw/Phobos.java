@@ -406,7 +406,12 @@ public class Phobos extends AgentImpl {
       }
     }
 
+    // An auction has been won for an item this client wanted, so add it to their list
     public void assignAuctionItem(int auctionNumber, float price) {
+      // Sometimes hotels can be won for 0, so just set to 1 so that system knows it is owned
+      if (price == 0) {
+      	price = 1;
+      }
       assignedAuctions[auctionNumber] = price;
     }
 
@@ -441,7 +446,6 @@ public class Phobos extends AgentImpl {
   public class Trip {
 
     private Client client;
-    private float utility;
     private int inFlight;
     private int outFlight;
     private int hotelType;
@@ -466,15 +470,6 @@ public class Phobos extends AgentImpl {
       for (int i = inFlight; i < outFlight; ++i) {
       	auctions.add(agent.getAuctionFor(TACAgent.CAT_HOTEL, hotelType, i));
       }
-
-      this.utility = calculateUtility();
-    }
-
-    // Method to return whether a hotel is used in this trip or not. Will be used
-    // to delete trip if auction closes for a hotel this trip needed, and none are
-    // owned by the client
-    public boolean tripContainsHotel(int auctionNumber) {
-      auctions.contains(auctionNumber) ? return true : return false;
     }
 
     private float calculateUtility() {
@@ -544,8 +539,14 @@ public class Phobos extends AgentImpl {
       // Calculate the overall utility of this trip
       return 1000 - travelPenalty - flightCost - hotelCost + hotelBonus - alreadyBoughtCost;
     }
+ 	
+ 	// Method to return whether a hotel is used in this trip or not. Will be used
+    // to delete trip if auction closes for a hotel this trip needed, and none are
+    // owned by the client
+    public boolean tripContainsHotel(int auctionNumber) { return auction.contains(auctionNumber); }
 
-    public float getUtility() { return utility; }
+    // Other getters
+    public float getUtility() { return calculateUtility(); }
     public int getInFlight() { return inFlight; }
     public int getOutFlight() { return outFlight; }
     public int getHotelType() { return hotelType; }
