@@ -144,6 +144,7 @@ public class Phobos extends AgentImpl {
   private static final boolean DEBUG = false;
 
   private float[] prices;
+  private float[] submittedPrices;
   private float[] currentFlightPrices;
 
   // Store hotel price estimates
@@ -214,12 +215,21 @@ public class Phobos extends AgentImpl {
 
     // Clear flights from monitoring
 
+    // Distribute the unused items among the clients
+    assignUnusedItems();
+
     for (Client c : clients) {
       Trip t = c.getOptimalTrip();
+
       // Re-add items to allocation table if not owned
 
       // Re-add flights to monitoring if not owned
     }
+  }
+
+  // TODO: function to assign the items left in unusedItems
+  private void assignUnusedItems() {
+
   }
 
   // New information about the quotes on all auctions for the auction
@@ -232,8 +242,6 @@ public class Phobos extends AgentImpl {
   // There are TACAgent have received an answer on a bid query/submission
   // (new information about the bid is available)
   public void bidUpdated(Bid bid) {
-  	// TODO: check all clients if a trip has been fulfilled
-    // TODO: Reassign unused resources among remaining clients
     log.fine("Bid Updated: id=" + bid.getID() + " auction=" + bid.getAuction() + " state=" + bid.getProcessingStateAsString());
     log.fine("       Hash: " + bid.getBidHash());
   }
@@ -253,8 +261,9 @@ public class Phobos extends AgentImpl {
   // game is available (preferences etc).
   public void gameStarted() {
     log.fine("Game " + agent.getGameID() + " started!");
+    submittedPrices = new float[agent.getAuctionNo()]; // Reset submitted prices array
     currentFlightPrices = new float[agent.getAuctionNo()]; // Reset flight prices array
-    unusedItems = new HashMap<Integer, Integer>();
+    unusedItems = new HashMap<Integer, Integer>(); // Reset unusedItems HashMap
     clients = new ArrayList<Client>();
     calculateAllocation();
     sendBids();
@@ -277,12 +286,31 @@ public class Phobos extends AgentImpl {
         cheapHotelEstimates[day] = 9999;
       }
 
-      // TODO: Assign the hotels to clients that want them
-      if (agent.getOwn(auction) > 0) {
-
+      // Assign the hotels to clients that want them
+      int own = agent.getOwn(auction);
+      if (own > 0) {
+        for (Client c : clients) {
+          if (own > 0 && c.needsAuction(auction)) {
+            --own;
+            c.assignAuctionItem(auction, submittedPrices[auction]);
+          }
+        }
+        // Give up any items that were bought but no longer needed
+        if (own > 0) {
+          if (unusedItems.get(auction) == null) {
+            unusedItems.put(auction, own);
+          } else {
+            unusedItems.put(auction, unusedItems.get(auction) + own);
+          }
+        }
       }
     }
 
+    // Check all clients to see if any are fulfilled and free up unused items
+    for (Client c : clients) {
+      c.checkIfFulfilled();
+    }
+    assignUnusedItems(); // Assign the left over items
     log.fine("*** Auction " + auction + " closed!");
   }
 
@@ -471,7 +499,7 @@ public class Phobos extends AgentImpl {
 
     // Check if the optimal trip requires this auction and whether the client
     // already owns it
-    public boolean clientNeedsAuction(int auctionNumber) {
+    public boolean needsAuction(int auctionNumber) {
       Trip t = getOptimalTrip();
       return (assignedAuctions[auctionNumber] == 0 && t.getAuctions().contains(auctionNumber));
     }
