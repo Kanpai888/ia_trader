@@ -211,6 +211,7 @@ public class Phobos extends AgentImpl {
   // There are TACAgent have received an answer on a bid query/submission
   // (new information about the bid is available)
   public void bidUpdated(Bid bid) {
+  	// TODO: check all clients if a trip has been fulfilled
     log.fine("Bid Updated: id=" + bid.getID() + " auction=" + bid.getAuction() + " state=" + bid.getProcessingStateAsString());
     log.fine("       Hash: " + bid.getBidHash());
   }
@@ -435,7 +436,22 @@ public class Phobos extends AgentImpl {
     // it from clients ArrayList and leaves unused hotels/flights in some structure
     // at the agent level
     public void checkIfFulfilled() {
+      // Get the optimal trip, and check if client owns all that is needed for it
+      boolean ownEverything = true;
+      ArrayList<Integer> auctions = getOptimalTrip().getAuctions();
+      for (Integer i : auctions) {
+      	if (assignedAuctions[i] == 0) { // If we don't own this item
+      	  ownEverything = false;
+      	}
+      }
 
+      if (ownEverything) {
+	    // Add all the unused hotels/flights to the pool
+
+	    // Remove client from list
+	    clients.remove(this);
+	    log.fine("*** Client " + clientNumber + " has been fulfilled.");
+	  }
     }
 
     public int getInFlight() { return preferredInFlight; }
@@ -549,6 +565,7 @@ public class Phobos extends AgentImpl {
 
     // Other getters
     public float getUtility() { return calculateUtility(); }
+    public ArrayList<Integer> getAuctions() { return auctions; }
     public int getInFlight() { return inFlight; }
     public int getOutFlight() { return outFlight; }
     public int getHotelType() { return hotelType; }
