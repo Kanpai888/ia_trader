@@ -270,7 +270,7 @@ public class Phobos extends AgentImpl {
     // When a hotel auction closes, change the estimated price to 9999 to
     // prevent other clients using a trip with it
     if (agent.getAuctionCategory(auction) == TACAgent.CAT_HOTEL) {
-      int day = agent.getAuctionDat(auction) - 1; // Need to subtract 1 as array starts at index 0
+      int day = agent.getAuctionDay(auction) - 1; // Need to subtract 1 as array starts at index 0
       if (agent.getAuctionType(auction) == TACAgent.TYPE_GOOD_HOTEL) {
         expensiveHotelEstimates[day] = 9999;
       } else {
@@ -467,6 +467,13 @@ public class Phobos extends AgentImpl {
         }
       }
       return currentHighest;
+    }
+
+    // Check if the optimal trip requires this auction and whether the client
+    // already owns it
+    public boolean clientNeedsAuction(int auctionNumber) {
+      Trip t = getOptimalTrip();
+      return (assignedAuctions[auctionNumber] == 0 && t.getAuctions().contains(auctionNumber));
     }
 
     // function checks if client trip has been fulfilled. If so, removes
