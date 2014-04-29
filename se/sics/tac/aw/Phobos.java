@@ -161,7 +161,6 @@ public class Phobos extends AgentImpl {
   // already been accounted for by the previous client
   private HashMap<Integer, Integer> unusedItems;
 
-  // TODO: At some point, optimum trip for client is set, and allocations are set
   // TODO: Add flight monitoring to buy at cheapest price
 
   protected void init(ArgEnumerator args) {
@@ -170,16 +169,19 @@ public class Phobos extends AgentImpl {
 
   // New information about the quotes on the auction (quote.getAuction())
   // has arrived
-  // TODO: update estimatedHotelPrices[] when quoteUpdated apart from those set to 9999 (closed auctions)
   public void quoteUpdated(Quote quote) {
     int auction = quote.getAuction();
     int auctionCategory = agent.getAuctionCategory(auction);
     if (auctionCategory == TACAgent.CAT_FLIGHT) {
       currentFlightPrices[auction] = quote.getAskPrice(); // Update currentFlightPrices[]
+      // TODO: Buy flights that are being monitored if the trend has changed to upwards, and assign them
     }
     else if (auctionCategory == TACAgent.CAT_HOTEL) {
-      int alloc = agent.getAllocation(auction); // Allocation is number of items wanted from this auction
+      // TODO: update estimatedHotelPrices[] when quoteUpdated apart from those set to 9999 (closed auctions)
+
+      // int alloc = agent.getAllocation(auction); // Allocation is number of items wanted from this auction
       /* If there are any to be won, and the Hypothetical Quantity Won is less than the amount needed */
+      /*
       if (alloc > 0 && quote.hasHQW(agent.getBid(auction)) && quote.getHQW() < alloc) {
         Bid bid = new Bid(auction);
         // Can not own anything in hotel auctions...
@@ -190,6 +192,7 @@ public class Phobos extends AgentImpl {
         }
         agent.submitBid(bid);
       }
+      */
     } else if (auctionCategory == TACAgent.CAT_ENTERTAINMENT) {
       int alloc = agent.getAllocation(auction) - agent.getOwn(auction);
       if (alloc != 0) {
@@ -207,10 +210,13 @@ public class Phobos extends AgentImpl {
       }
     }
     // Recalculate the allocations
-    rebuildAllocations();
+    allocateAndBid();
   }
 
-  private void rebuildAllocations() {
+  // TODO: Function should set the allocation tables and place the bids
+  private void allocateAndBid() {
+    ArrayList<Bid> bids = new ArrayList<Bid>(); // Stores the bids which are placed at the end of the function
+
     // Clear allocation table
 
     // Clear flights from monitoring
@@ -225,6 +231,30 @@ public class Phobos extends AgentImpl {
 
       // Re-add flights to monitoring if not owned
     }
+
+    // Place the bids
+    for (Bid b : bids) {
+      agent.submitBid(b);
+    }
+    
+  }
+
+  // TODO: function for smarter assignment of available items, so they go to the
+  // client that benefit the most from them first. Used in assignUnusedItems(),
+  // auctionClosed(), and quoteUpdated()
+  private void assignItems(int auctionNumber, float price, int quantity) {
+    for (Client c : clients) {
+      if (quantity > 0 && c.needsAuction(auctionNumber)) {
+        --quantity;
+        c.assignAuctionItem(auctionNumber, price);
+      }
+    }
+    // Place any remaining items in unused items
+    if (unusedItems.get(auctionNumber) == null) {
+      unusedItems.put(auctionNumber, quantity);
+    } else {
+      unusedItems.put(auctionNumber, unusedItems.get(auctionNumber) + quantity);
+    }
   }
 
   // Function to assign the items left in unusedItems
@@ -234,16 +264,10 @@ public class Phobos extends AgentImpl {
     for (Integer k : unusedItems.keySet()) {
       int quantity = unusedItems.get(k);
       if (quantity > 0) {
-        for (Client c : clients) {
-          if (quantity > 0 && c.needsAuction(k)) {
-            --quantity;
-            c.assignAuctionItem(k, 1);
-          }
-        }
-        unusedItems.put(k, quantity); // Replace any un-needed unused items
+        unusedItems.put(k, 0); // Gets reset based on usage in assignItems()
+        assignItems(k, 1, quantity);
       }
     }
-
   }
 
   // New information about the quotes on all auctions for the auction
@@ -280,7 +304,7 @@ public class Phobos extends AgentImpl {
     unusedItems = new HashMap<Integer, Integer>(); // Reset unusedItems HashMap
     clients = new ArrayList<Client>();
     calculateAllocation();
-    sendBids();
+    // sendBids();
   }
 
   // The current game has ended
@@ -303,20 +327,7 @@ public class Phobos extends AgentImpl {
       // Assign the hotels to clients that want them
       int own = agent.getOwn(auction);
       if (own > 0) {
-        for (Client c : clients) {
-          if (own > 0 && c.needsAuction(auction)) {
-            --own;
-            c.assignAuctionItem(auction, submittedPrices[auction]);
-          }
-        }
-        // Give up any items that were bought but no longer needed
-        if (own > 0) {
-          if (unusedItems.get(auction) == null) {
-            unusedItems.put(auction, own);
-          } else {
-            unusedItems.put(auction, unusedItems.get(auction) + own);
-          }
-        }
+        assignItems(auction, submittedPrices[auction], own);
       }
     }
 
