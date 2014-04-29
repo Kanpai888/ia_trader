@@ -527,7 +527,7 @@ public class Phobos extends AgentImpl {
       // the estimated price
       for (int i = inFlight; i < outFlight; ++i) {
       	// Need to get auction number to check if client owns hotel
-      	int auction = agent.getAuctionFor(TACAgent.CAT_HOTEL, hotelType, i);
+      	auction = agent.getAuctionFor(TACAgent.CAT_HOTEL, hotelType, i);
       	if (clientCosts[auction] > 0) { // If the client already owns the hotel
       	  hotelCost += clientCosts[auction];
       	} else {// Don't own the hotel, use the estimated price
@@ -561,7 +561,7 @@ public class Phobos extends AgentImpl {
  	// Method to return whether a hotel is used in this trip or not. Will be used
     // to delete trip if auction closes for a hotel this trip needed, and none are
     // owned by the client
-    public boolean tripContainsHotel(int auctionNumber) { return auction.contains(auctionNumber); }
+    public boolean tripContainsHotel(int auctionNumber) { return auctions.contains(auctionNumber); }
 
     // Other getters
     public float getUtility() { return calculateUtility(); }
