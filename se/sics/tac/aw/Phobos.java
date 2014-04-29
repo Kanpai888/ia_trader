@@ -156,8 +156,11 @@ public class Phobos extends AgentImpl {
 
   private ArrayList<Client> clients;
 
-  // TODO: Need some structure to store purchased hotels/flights that are no longer needed
-  // TODO: Add some point optimum trip for client is set, and allocations are set
+  // unusedItems stores auctionID and quantity. No need to store cost, as it has
+  // already been accounted for by the previous client
+  private HashMap<Integer, Integer> unusedItems;
+
+  // TODO: At some point, optimum trip for client is set, and allocations are set
   // TODO: Add flight monitoring to buy at cheapest price
 
   protected void init(ArgEnumerator args) {
@@ -212,6 +215,7 @@ public class Phobos extends AgentImpl {
   // (new information about the bid is available)
   public void bidUpdated(Bid bid) {
   	// TODO: check all clients if a trip has been fulfilled
+    // TODO: Reassign unused resources among remaining clients
     log.fine("Bid Updated: id=" + bid.getID() + " auction=" + bid.getAuction() + " state=" + bid.getProcessingStateAsString());
     log.fine("       Hash: " + bid.getBidHash());
   }
@@ -232,6 +236,7 @@ public class Phobos extends AgentImpl {
   public void gameStarted() {
     log.fine("Game " + agent.getGameID() + " started!");
     currentFlightPrices = new float[agent.getAuctionNo()]; // Reset flight prices array
+    unusedItems = new HashMap<Integer, Integer>();
     clients = new ArrayList<Client>();
     calculateAllocation();
     sendBids();
@@ -416,6 +421,7 @@ public class Phobos extends AgentImpl {
       	price = 1;
       }
       assignedAuctions[auctionNumber] = price;
+      log.fine("*** Client " + clientNumber + " has been allocated Auction ID " + auctionNumber + " sold at " + price);
     }
 
     // TODO: Add method when hotel auction closes. If no rooms owned, delete trips
@@ -432,26 +438,36 @@ public class Phobos extends AgentImpl {
       return currentHighest;
     }
 
-    // TODO: function checks if client trip has been fulfilled. If so, removes
+    // function checks if client trip has been fulfilled. If so, removes
     // it from clients ArrayList and leaves unused hotels/flights in some structure
     // at the agent level
     public void checkIfFulfilled() {
       // Get the optimal trip, and check if client owns all that is needed for it
       boolean ownEverything = true;
       ArrayList<Integer> auctions = getOptimalTrip().getAuctions();
+
       for (Integer i : auctions) {
-      	if (assignedAuctions[i] == 0) { // If we don't own this item
-      	  ownEverything = false;
-      	}
+        if (assignedAuctions[i] == 0) { // If we don't own this item
+          ownEverything = false;
+        }
       }
 
       if (ownEverything) {
-	    // Add all the unused hotels/flights to the pool
+        // Add all the unused hotels/flights to the unusedItems for other clients to use
+        for (int i = 0; i < assignedAuctions.length; ++i) {
+          if (!auctions.contains(i)) { // Add this item to unusedItems
+            if (unusedItems.get(i) == null) {
+              unusedItems.put(i, 1);
+            } else {
+              unusedItems.put(i, unusedItems.get(i) + 1);
+            }
+          }
+        }
 
-	    // Remove client from list
-	    clients.remove(this);
-	    log.fine("*** Client " + clientNumber + " has been fulfilled.");
-	  }
+        // Remove client from list
+        clients.remove(this);
+        log.fine("*** Client " + clientNumber + " has been fulfilled.");
+      }
     }
 
     public int getInFlight() { return preferredInFlight; }
@@ -516,10 +532,10 @@ public class Phobos extends AgentImpl {
       }
 
       auction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
-	  if (clientCosts[auction]  > 0) {
-      	flightCost += clientCosts[auction];
+      if (clientCosts[auction]  > 0) {
+        flightCost += clientCosts[auction];
       } else {
-      	flightCost += currentFlightPrices[auction];
+        flightCost += currentFlightPrices[auction];
       }
 
       // Add up the expected cost of these hotel rooms
@@ -557,8 +573,8 @@ public class Phobos extends AgentImpl {
       // Calculate the overall utility of this trip
       return 1000 - travelPenalty - flightCost - hotelCost + hotelBonus - alreadyBoughtCost;
     }
- 	
- 	// Method to return whether a hotel is used in this trip or not. Will be used
+ 
+    // Method to return whether a hotel is used in this trip or not. Will be used
     // to delete trip if auction closes for a hotel this trip needed, and none are
     // owned by the client
     public boolean tripContainsHotel(int auctionNumber) { return auctions.contains(auctionNumber); }
