@@ -155,7 +155,7 @@ public class Phobos extends AgentImpl {
 
   private ArrayList<Client> clients;
 
-  // TODO: Need some structure to store purchased hotels that are no longer needed
+  // TODO: Need some structure to store purchased hotels/flights that are no longer needed
 
   protected void init(ArgEnumerator args) {
     prices = new float[agent.getAuctionNo()];
@@ -370,8 +370,7 @@ public class Phobos extends AgentImpl {
     private int preferredOutFlight;
     private int hotelBonus;
     private ArrayList<Trip> possibleTrips;
-    private boolean[] ownedHotels;
-    // TODO: Need some structure to store owned flights
+    private float[] assignedAuctions; // Stores the price of all aucitons won for this client
     // TODO : Need some structure for price paid on items owned, with methods for trip to access
 
     public Client(int clientNumber) {
@@ -398,6 +397,11 @@ public class Phobos extends AgentImpl {
 
         }
       }
+    }
+
+    public void assignAuctionItem(int auctionNumber, float price) {
+      assignedAuctions[auctionNumber] = price;
+      // TODO: Update the price for all the trips to the price paid
     }
 
     // TODO: Add method when hotel auction closes. If no rooms owned, delete trips
@@ -431,6 +435,7 @@ public class Phobos extends AgentImpl {
     public int getInFlight() { return preferredInFlight; }
     public int getOutFlight() { return preferredOutFlight; }
     public int getHotelBonus() { return hotelBonus; }
+    public float[] getAssignedAuctions() { return assignedAuctions; }
 
   } // Client
 
@@ -463,8 +468,14 @@ public class Phobos extends AgentImpl {
       this.utility = calculateUtility();
     }
 
-    // TODO: create method to return whether a hotel is used in this trip or not
+    // Method to return whether a hotel is used in this trip or not
     public boolean tripContainsHotel(int auctionNumber) {
+      for (int i = inFlight; i < outFlight ++i) {
+        int auction = agent.getAuctionFor(TACAgent.CAT_HOTEL, hotelType, i);
+        if (auctionNumber == auction) {
+          return true;
+        }
+      }
       return false;
     }
 
