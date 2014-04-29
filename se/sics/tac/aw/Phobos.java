@@ -153,10 +153,10 @@ public class Phobos extends AgentImpl {
 
   // Store hotel price estimates
   private float[] cheapHotelEstimates = {
-    50, 70, 100, 50
+    60, 70, 100, 60, 60
   };
   private float[] expensiveHotelEstimates = {
-    100, 150, 300, 150
+    100, 150, 300, 150, 60
   };
 
   private ArrayList<Client> clients;
@@ -243,7 +243,9 @@ public class Phobos extends AgentImpl {
     allocateAndBid();
   }
 
-  // TODO: Function should set the allocation tables and place the bids
+  // TODO: Function should set the allocation tables and place the bids. Should use
+  // agent.getOwn(), in case system crashes. On restart, it will buy everything again!
+  // Also needs to use Bid.addBidPoint(). Can't use multiple Bids
   private void allocateAndBid() {
     ArrayList<Bid> bids = new ArrayList<Bid>(); // Stores the bids which are placed at the end of the function
 
@@ -262,11 +264,23 @@ public class Phobos extends AgentImpl {
       for (int i = t.getInFlight(); i < t.getOutFlight(); ++i) {
         int auction = agent.getAuctionFor(TACAgent.CAT_HOTEL, t.getHotelType(), i);
         if (!c.ownsItem(auction)) {
-          Trip comparison = c.getOptimalTrip(i);
+          Trip comparison = c.getOptimalTrip(auction);
           float benefitDifference = t.getUtility() - comparison.getUtility();
-          Bid b = new Bid(auction);
-          b.addBidPoint(1, benefitDifference);
-          bids.add(b);
+          Bid bid = null;
+          for (Bid b : bids) {
+            if (b.getAuction() == auction) {
+              bid = b;
+            }
+          }
+          if (bid == null) {
+            bid = new Bid(auction);
+            bids.add(bid);
+          }
+          if (t.getHotelType() == TACAgent.TYPE_GOOD_HOTEL) {
+            bid.addBidPoint(1, expensiveHotelEstimates[i]);
+          } else {
+            bid.addBidPoint(1, cheapHotelEstimates[i]);
+          }
           submittedPrices[auction] = benefitDifference;
         }
       }
@@ -288,7 +302,6 @@ public class Phobos extends AgentImpl {
           monitorFlights.put(outFlightAuction, monitorFlights.get(outFlightAuction) + 1);
         }
       }
-      log.fine("*** Finished monitoring flights and bidding for client " + c.getClientNumber());
     }
 
     // Place the bids
@@ -334,14 +347,14 @@ public class Phobos extends AgentImpl {
   // category has arrived (quotes for a specific type of auctions are
   // often requested at once).
   public void quoteUpdated(int auctionCategory) {
-    log.fine("All quotes for " + agent.auctionCategoryToString(auctionCategory) + " has been updated");
+    // log.fine("All quotes for " + agent.auctionCategoryToString(auctionCategory) + " has been updated");
   }
 
   // There are TACAgent have received an answer on a bid query/submission
   // (new information about the bid is available)
   public void bidUpdated(Bid bid) {
-    log.fine("Bid Updated: id=" + bid.getID() + " auction=" + bid.getAuction() + " state=" + bid.getProcessingStateAsString());
-    log.fine("       Hash: " + bid.getBidHash());
+    // log.fine("Bid Updated: id=" + bid.getID() + " auction=" + bid.getAuction() + " state=" + bid.getProcessingStateAsString());
+    // log.fine("       Hash: " + bid.getBidHash());
   }
 
   // The bid has been rejected (reason is bid.getRejectReason())
@@ -394,8 +407,14 @@ public class Phobos extends AgentImpl {
     }
 
     // Check all clients to see if any are fulfilled and free up unused items
+    ArrayList<Client> finishedClients = new ArrayList<Client>();
     for (Client c : clients) {
-      c.checkIfFulfilled();
+      if (c.isFulfilled()) {
+        finishedClients.add(c);
+      }
+    }
+    for (Client c : finishedClients) {
+      clients.remove(c);
     }
     assignUnusedItems(); // Assign the left over items
     log.fine("*** Auction " + auction + " closed!");
@@ -586,23 +605,24 @@ public class Phobos extends AgentImpl {
       return currentHighest;
     }
 
-    // Return optimal trip that doesn't use ignoreDay
-    public Trip getOptimalTrip(int ignoreDay) {
+    // Return optimal trip that doesn't use ignoreAuction
+    public Trip getOptimalTrip(int ignoreAuction) {
       Trip currentHighest = null;
 
       // Get a trip without that day for the initial comparison
       for (Trip t : possibleTrips) {
-        if (!t.containsDay(ignoreDay)) {
+        if (!t.containsHotel(ignoreAuction)) {
           currentHighest = t;
         }
       }
 
       if (currentHighest == null) {
         // There are no trips available without this day. This should never happen
-        log.warning("*** Unable to find a trip for client " + clientNumber + " without day " + ignoreDay);
+        log.warning("*** Unable to find a trip for client " + clientNumber + " without day " + ignoreAuction);
+        log.warning("*** Clients preferences were inFlight " + preferredInFlight + " and outFlight " + preferredOutFlight);
       } else {
         for (Trip t : possibleTrips) {
-          if (!t.containsDay(ignoreDay) && t.getUtility() > currentHighest.getUtility()) {
+          if (!t.containsHotel(ignoreAuction) && t.getUtility() > currentHighest.getUtility()) {
             currentHighest = t;
           }
         }
@@ -620,7 +640,7 @@ public class Phobos extends AgentImpl {
     // function checks if client trip has been fulfilled. If so, removes
     // it from clients ArrayList and leaves unused hotels/flights in some structure
     // at the agent level
-    public void checkIfFulfilled() {
+    public boolean isFulfilled() {
       // Get the optimal trip, and check if client owns all that is needed for it
       boolean ownEverything = true;
       ArrayList<Integer> auctions = getOptimalTrip().getAuctions();
@@ -644,9 +664,10 @@ public class Phobos extends AgentImpl {
         }
 
         // Remove client from list
-        clients.remove(this);
         log.fine("*** Client " + clientNumber + " has been fulfilled.");
+        return true;
       }
+      return false;
     }
 
     public boolean ownsItem(int auctionNumber) { return assignedAuctions[auctionNumber] > 0; }
@@ -668,7 +689,9 @@ public class Phobos extends AgentImpl {
     private float[] estimatedHotelPrices;
 
     public Trip(Client c, int inFlight, int outFlight, int hotelType) {
-      this.client = client;
+      auctions = new ArrayList<Integer>();
+
+      this.client = c;
       this.inFlight = inFlight;
       this.outFlight = outFlight;
       this.hotelType = hotelType;
