@@ -188,6 +188,8 @@ public class Phobos extends AgentImpl {
         // Remove the flights from monitoring and allocate them
         monitorFlights.put(auction, 0);
         assignItems(auction, quote.getAskPrice(), quantity);
+
+        log.fine("*** Bought " + quantity + " flights");
       }
     }
     else if (auctionCategory == TACAgent.CAT_HOTEL) {
@@ -257,10 +259,36 @@ public class Phobos extends AgentImpl {
       Trip t = c.getOptimalTrip();
       // Now to get maximum amount to bid for each day, compare benefit of optimal
       // trip with benefit of optimal trip without that day
-
-      // Create the appropriate bids for this client taking owned items into account
+      for (int i = t.getInFlight(); i < t.getOutFlight(); ++i) {
+        int auction = agent.getAuctionFor(TACAgent.CAT_HOTEL, t.getHotelType(), i);
+        if (!c.ownsItem(auction)) {
+          Trip comparison = c.getOptimalTrip(i);
+          float benefitDifference = t.getUtility() - comparison.getUtility();
+          Bid b = new Bid(auction);
+          b.addBidPoint(1, benefitDifference);
+          bids.add(b);
+          submittedPrices[auction] = benefitDifference;
+        }
+      }
 
       // Re-add flights to monitoring if not owned
+      int inFlightAuction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, t.getInFlight());
+      int outFlightAuction = agent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, t.getOutFlight());
+      if (!c.ownsItem(inFlightAuction)) {
+        if (monitorFlights.get(inFlightAuction) == null) {
+          monitorFlights.put(inFlightAuction, 1);
+        } else {
+          monitorFlights.put(inFlightAuction, monitorFlights.get(inFlightAuction) + 1);
+        }
+      }
+      if (!c.ownsItem(outFlightAuction)) {
+        if (monitorFlights.get(outFlightAuction) == null) {
+          monitorFlights.put(outFlightAuction, 1);
+        } else {
+          monitorFlights.put(outFlightAuction, monitorFlights.get(outFlightAuction) + 1);
+        }
+      }
+      log.fine("*** Finished monitoring flights and bidding for client " + c.getClientNumber());
     }
 
     // Place the bids
@@ -278,6 +306,7 @@ public class Phobos extends AgentImpl {
       if (quantity > 0 && c.needsAuction(auctionNumber)) {
         --quantity;
         c.assignAuctionItem(auctionNumber, price);
+        log.fine("*** Assigned an item");
       }
     }
     // Place any remaining items in unused items
@@ -620,6 +649,8 @@ public class Phobos extends AgentImpl {
       }
     }
 
+    public boolean ownsItem(int auctionNumber) { return assignedAuctions[auctionNumber] > 0; }
+    public int getClientNumber() { return clientNumber; }
     public int getInFlight() { return preferredInFlight; }
     public int getOutFlight() { return preferredOutFlight; }
     public int getHotelBonus() { return hotelBonus; }
