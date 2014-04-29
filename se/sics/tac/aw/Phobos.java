@@ -255,6 +255,8 @@ public class Phobos extends AgentImpl {
 
     for (Client c : clients) {
       Trip t = c.getOptimalTrip();
+      // Now to get maximum amount to bid for each day, compare benefit of optimal
+      // trip with benefit of optimal trip without that day
 
       // Create the appropriate bids for this client taking owned items into account
 
@@ -555,6 +557,30 @@ public class Phobos extends AgentImpl {
       return currentHighest;
     }
 
+    // Return optimal trip that doesn't use ignoreDay
+    public Trip getOptimalTrip(int ignoreDay) {
+      Trip currentHighest = null;
+
+      // Get a trip without that day for the initial comparison
+      for (Trip t : possibleTrips) {
+        if (!t.containsDay(ignoreDay)) {
+          currentHighest = t;
+        }
+      }
+
+      if (currentHighest == null) {
+        // There are no trips available without this day. This should never happen
+        log.warning("*** Unable to find a trip for client " + clientNumber + " without day " + ignoreDay);
+      } else {
+        for (Trip t : possibleTrips) {
+          if (!t.containsDay(ignoreDay) && t.getUtility() > currentHighest.getUtility()) {
+            currentHighest = t;
+          }
+        }
+      }
+      return currentHighest;
+    }
+
     // Check if the optimal trip requires this auction and whether the client
     // already owns it
     public boolean needsAuction(int auctionNumber) {
@@ -702,6 +728,11 @@ public class Phobos extends AgentImpl {
     // to delete trip if auction closes for a hotel this trip needed, and none are
     // owned by the client
     public boolean containsHotel(int auctionNumber) { return auctions.contains(auctionNumber); }
+    public boolean containsDay(int day) {
+      int auction1 = agent.getAuctionFor(TACAgent.CAT_HOTEL, TACAgent.TYPE_GOOD_HOTEL, day);
+      int auction2 = agent.getAuctionFor(TACAgent.CAT_HOTEL, TACAgent.TYPE_CHEAP_HOTEL, day);
+      return auctions.contains(auction1) || auctions.contains(auction2);
+    }
 
     // Other getters
     public float getUtility() { return calculateUtility(); }
