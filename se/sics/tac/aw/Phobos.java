@@ -144,8 +144,12 @@ public class Phobos extends AgentImpl {
   private static final boolean DEBUG = false;
 
   private float[] prices;
+  private float[] previousPrices;
   private float[] submittedPrices;
   private float[] currentFlightPrices;
+
+  // Store a list of the flights that are being monitored for buying
+  private HashMap<Integer, Integer> monitorFlights;
 
   // Store hotel price estimates
   private float[] cheapHotelEstimates = {
@@ -161,8 +165,6 @@ public class Phobos extends AgentImpl {
   // already been accounted for by the previous client
   private HashMap<Integer, Integer> unusedItems;
 
-  // TODO: Add flight monitoring to buy at cheapest price
-
   protected void init(ArgEnumerator args) {
     prices = new float[agent.getAuctionNo()];
   }
@@ -174,7 +176,19 @@ public class Phobos extends AgentImpl {
     int auctionCategory = agent.getAuctionCategory(auction);
     if (auctionCategory == TACAgent.CAT_FLIGHT) {
       currentFlightPrices[auction] = quote.getAskPrice(); // Update currentFlightPrices[]
-      // TODO: Buy flights that are being monitored if the trend has changed to upwards, and assign them
+
+      // If trend is negative, price going down
+      float trend = quote.getAskPrice() - previousPrices[auction];
+      if (trend > 0 && monitorFlights.get(auction) != null && monitorFlights.get(auction) > 0) { // Prices are going up, so buy!
+        int quantity = monitorFlights.get(auction);
+        Bid b = new Bid(auction);
+        b.addBidPoint(quantity, 1000);
+        agent.submitBid(b);
+        
+        // Remove the flights from monitoring and allocate them
+        monitorFlights.put(auction, 0);
+        assignItems(auction, quote.getAskPrice(), quantity);
+      }
     }
     else if (auctionCategory == TACAgent.CAT_HOTEL) {
       // TODO: update estimatedHotelPrices[] when quoteUpdated apart from those set to 9999 (closed auctions)
@@ -209,6 +223,9 @@ public class Phobos extends AgentImpl {
         agent.submitBid(bid);
       }
     }
+    // Updated the previous prices array
+    previousPrices[auction] = quote.getAskPrice();
+
     // Recalculate the allocations
     allocateAndBid();
   }
@@ -299,9 +316,11 @@ public class Phobos extends AgentImpl {
   // game is available (preferences etc).
   public void gameStarted() {
     log.fine("Game " + agent.getGameID() + " started!");
+    previousPrices = new float[agent.getAuctionNo()]; // Reset the previous prices array
     submittedPrices = new float[agent.getAuctionNo()]; // Reset submitted prices array
     currentFlightPrices = new float[agent.getAuctionNo()]; // Reset flight prices array
     unusedItems = new HashMap<Integer, Integer>(); // Reset unusedItems HashMap
+    monitorFlights = new HashMap<Integer, Integer>(); // Reset the flight monitoring
     clients = new ArrayList<Client>();
     calculateAllocation();
     // sendBids();
