@@ -192,6 +192,17 @@ public class Phobos extends AgentImpl {
     }
     else if (auctionCategory == TACAgent.CAT_HOTEL) {
       // TODO: update estimatedHotelPrices[] when quoteUpdated apart from those set to 9999 (closed auctions)
+      // Really basic impl uses current price and adds 50 for the estimates
+      int day = agent.getAuctionDay(auction) - 1; // Need to subtract 1 as array starts at index 0
+      if (agent.getAuctionType(auction) == TACAgent.TYPE_GOOD_HOTEL) {
+        if (expensiveHotelEstimates[day] != 9999) {
+          expensiveHotelEstimates[day] = quote.getAskPrice() + 50;
+        }
+      } else {
+        if (cheapHotelEstimates[day] != 9999) {
+          cheapHotelEstimates[day] = quote.getAskPrice() + 50;
+        }
+      }
 
       // int alloc = agent.getAllocation(auction); // Allocation is number of items wanted from this auction
       /* If there are any to be won, and the Hypothetical Quantity Won is less than the amount needed */
@@ -234,9 +245,10 @@ public class Phobos extends AgentImpl {
   private void allocateAndBid() {
     ArrayList<Bid> bids = new ArrayList<Bid>(); // Stores the bids which are placed at the end of the function
 
-    // Clear allocation table
-
     // Clear flights from monitoring
+    for (Integer auction : monitorFlights.keySet()) {
+      monitorFlights.put(auction, 0);
+    }
 
     // Distribute the unused items among the clients
     assignUnusedItems();
@@ -244,7 +256,7 @@ public class Phobos extends AgentImpl {
     for (Client c : clients) {
       Trip t = c.getOptimalTrip();
 
-      // Re-add items to allocation table if not owned
+      // Create the appropriate bids for this client taking owned items into account
 
       // Re-add flights to monitoring if not owned
     }
@@ -323,7 +335,7 @@ public class Phobos extends AgentImpl {
     monitorFlights = new HashMap<Integer, Integer>(); // Reset the flight monitoring
     clients = new ArrayList<Client>();
     calculateAllocation();
-    // sendBids();
+    sendBids();
   }
 
   // The current game has ended
@@ -364,6 +376,7 @@ public class Phobos extends AgentImpl {
       int alloc = agent.getAllocation(i) - agent.getOwn(i);
       float price = -1f;
       switch (agent.getAuctionCategory(i)) {
+        /*
         case TACAgent.CAT_FLIGHT:
           if (alloc > 0) {
             price = 1000;
@@ -375,6 +388,7 @@ public class Phobos extends AgentImpl {
             prices[i] = 200f;
           }
           break;
+          */
         case TACAgent.CAT_ENTERTAINMENT:
           if (alloc < 0) {
             price = 200;
