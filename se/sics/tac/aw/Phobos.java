@@ -248,6 +248,24 @@ public class Phobos extends AgentImpl {
 
   // The auction with id "auction" has closed
   public void auctionClosed(int auction) {
+	// When a hotel auction closes, change the estimated price to 9999 to
+    // prevent other clients using a trip with it
+    if (TACAgent.getAuctionCategory(auction) == TACAgent.CAT_HOTEL) {
+      int day = TACAgent.getAuctionDay(auction) - 1; // Need to subtract 1 as array starts at index 0
+      if (TACAgent.getAuctionType(auction) == TACAgent.TYPE_GOOD_HOTEL) {
+        expensiveHotelEstimates[day] = 9999;
+      } else {
+        cheapHotelEstimates[day] = 9999;
+      }
+
+      // Assign the hotels to clients that want them
+      int own = agent.getOwn(auction);
+      if (own > 0) {
+        assignCosts(auction, agent.getQuote(auction).getAskPrice(), own);
+      }
+    }
+    evaluateClientsFufillness();
+    
     log.fine("*** Auction " + auction + " closed!");
   }
   
@@ -268,6 +286,25 @@ public class Phobos extends AgentImpl {
 			  client.refreshSelectedTrip();
 		  }
 		  
+	  }
+  }
+  
+  /**
+   * Causes all clients to evaluate if they have a full trip.
+   */
+  private void evaluateClientsFufillness(){
+	  ArrayList<Integer> allResources = new ArrayList<Integer>();
+	  // Create an arrayList of all resources we own,
+	  // e.g if we have 3 of auction num 8, then we put in the arrayList
+	  // {8,8,8}. This is used to substract from.
+	  for (int i = 0, n = TACAgent.getAuctionNo(); i < n; i++) {
+	      for(int num = agent.getOwn(i); num < agent.getOwn(i); num++){
+	    	  allResources.add(i);
+	      }
+	  }
+	  
+	  for(Client client:clients){
+		  client.evaluateFufillness(allResources);
 	  }
   }
 
@@ -354,8 +391,6 @@ public class Phobos extends AgentImpl {
     return -1;
   }
 
-
-
   // -------------------------------------------------------------------
   // Only for backward compability
   // -------------------------------------------------------------------
@@ -378,9 +413,11 @@ public class Phobos extends AgentImpl {
     private ArrayList<Trip> possibleTrips;
     private Trip selectedTrip;
     private float[] assignedAuctions; // Stores the price of all aucitons won for this client
-
+    private boolean tripFufilled;
+    
     public Client(int clientNumber) {
       // Initialise vars
+      tripFufilled = false;
       possibleTrips = new ArrayList<Trip>();
       assignedAuctions = new float[TACAgent.getAuctionNo()];
 
@@ -396,12 +433,16 @@ public class Phobos extends AgentImpl {
     }
 
     /**
-     * Changes the current selected trip to the most optimal one
+     * Changes the current selected trip to the most optimal one.
+     * Can only shorten trip if it has not already been fulfilled
      */
     public void refreshSelectedTrip(){
-    	clearAllocationTable();
-    	this.selectedTrip = getOptimalTrip();
-    	updateAllocationTable();
+    	if(!tripFufilled){
+	    	clearAllocationTable();
+	    	this.selectedTrip = getOptimalTrip();
+	    	updateAllocationTable();
+	    	log.fine("+++ Client "+clientNumber+" has switched trips");
+    	}
     }
     
     /**
@@ -414,6 +455,23 @@ public class Phobos extends AgentImpl {
     		return true;
     	}
     	return false;
+    }
+    
+    /**
+     * Tests if this clients trip can be fulfilled with the available resources,
+     * passed in via the param. Will remove ints from arraylist
+     * @param resources auction IDs for client to pick from
+     */
+    public void evaluateFufillness(ArrayList<Integer> resources){
+    	boolean fufilled = true;
+    	for(int wanted: selectedTrip.getAuctions()){
+    		if(resources.contains(wanted)){
+    			resources.remove(wanted);
+    		}else{
+    			fufilled = false;
+    		}
+    	}
+    	this.tripFufilled = fufilled;
     }
     
     /**
