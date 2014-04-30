@@ -152,9 +152,7 @@ public class Phobos extends AgentImpl {
 
   // Store hotel price estimates
   private float[] cheapHotelEstimates;
-  private float[] expensiveHotelEstimates = {
-    
-  };
+  private float[] expensiveHotelEstimates;
 
   private ArrayList<Client> clients;
 
@@ -196,11 +194,11 @@ public class Phobos extends AgentImpl {
         int day = agent.getAuctionDay(auction) - 1; // Need to subtract 1 as array starts at index 0
         if (agent.getAuctionType(auction) == TACAgent.TYPE_GOOD_HOTEL) {
           if (expensiveHotelEstimates[day] != 9999) {
-            expensiveHotelEstimates[day] = quote.getAskPrice() + 50;
+            expensiveHotelEstimates[day] = quote.getAskPrice() + 51;
           }
         } else {
           if (cheapHotelEstimates[day] != 9999) {
-            cheapHotelEstimates[day] = quote.getAskPrice() + 50;
+            cheapHotelEstimates[day] = quote.getAskPrice() + 51;
           }
         }
       }
