@@ -128,7 +128,6 @@ package se.sics.tac.aw;
 import se.sics.tac.util.ArgEnumerator;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.logging.*;
 
 public class Phobos extends AgentImpl {
@@ -139,14 +138,14 @@ public class Phobos extends AgentImpl {
   private static final boolean DEBUG = false;
 
   private float[] prices;
+  private float[] previousPrices;
   private float[] currentFlightPrices;
   
   // Store hotel price estimates
-  private float[] cheapHotelEstimates = new float[]{200,300,300,200};
-  private float[] expensiveHotelEstimates = new float[]{300,400,400,300};
+  private float[] cheapHotelEstimates = new float[]{136,223,223,136};
+  private float[] expensiveHotelEstimates = new float[]{180,280,280,180};
 
   private ArrayList<Client> clients;
-  private HashMap<Integer, Integer> resources; // stores number won from each auction
   
   protected void init(ArgEnumerator args) {
     prices = new float[TACAgent.getAuctionNo()];
@@ -157,7 +156,23 @@ public class Phobos extends AgentImpl {
   public void quoteUpdated(Quote quote) {
     int auction = quote.getAuction();
     int auctionCategory = TACAgent.getAuctionCategory(auction);
-    if (auctionCategory == TACAgent.CAT_HOTEL) {
+
+    if (auctionCategory == TACAgent.CAT_FLIGHT) {
+        currentFlightPrices[auction] = quote.getAskPrice(); // Update currentFlightPrices[]
+
+        // If trend is negative, price going down
+        float trend = quote.getAskPrice() - previousPrices[auction];
+        int flightsNeeded = agent.getAllocation(auction) - agent.getOwn(auction);
+        
+        if (trend > 0 && flightsNeeded > 0) { // Prices are going up, so buy!
+          Bid b = new Bid(auction);
+          b.addBidPoint(flightsNeeded, 1000);
+          agent.submitBid(b);
+          
+          // Remove the flights from monitoring and allocate them
+          assignCosts(auction, quote.getAskPrice(), flightsNeeded);
+        }
+    } else if (auctionCategory == TACAgent.CAT_HOTEL) {
       int alloc = agent.getAllocation(auction); // Allocation is number of items wanted from this auction
       /* If there are any to be won, and the Hypothetical Quantity Won is less than the amount needed */
       if (alloc > 0 && quote.hasHQW(agent.getBid(auction)) && quote.getHQW() < alloc) {
@@ -186,6 +201,7 @@ public class Phobos extends AgentImpl {
         agent.submitBid(bid);
       }
     }
+    previousPrices[auction] = quote.getAskPrice();
   }
 
   // New information about the quotes on all auctions for the auction
@@ -218,7 +234,8 @@ public class Phobos extends AgentImpl {
   public void gameStarted() {
     log.fine("Game " + agent.getGameID() + " started!");
     currentFlightPrices = new float[TACAgent.getAuctionNo()]; // Reset flight prices array
-
+    previousPrices = new float[TACAgent.getAuctionNo()]; // Reset the previous prices array
+    
     clients = new ArrayList<Client>(); //
     calculateAllocation();
     sendBids();
@@ -232,6 +249,26 @@ public class Phobos extends AgentImpl {
   // The auction with id "auction" has closed
   public void auctionClosed(int auction) {
     log.fine("*** Auction " + auction + " closed!");
+  }
+  
+  /**
+   * Assigns auction costs to clients. Can cause clients to change trips 
+   * @param auction
+   * @param cost
+   * @param number
+   */
+  private void assignCosts(int auction, float cost, int number) {
+	  for(Client client:clients){
+		  if(client.resourceWanted(auction) && number > 0){
+			  client.assignAuctionCost(auction, cost);
+			  number--;
+		  }else if(client.resourceWanted(auction) && number == 0){
+			  // TODO Check this works
+			  // Could not win auction
+			  client.refreshSelectedTrip();
+		  }
+		  
+	  }
   }
 
   // Sends initial bids
@@ -389,7 +426,7 @@ public class Phobos extends AgentImpl {
      * @param auction
      * @param price
      */
-    public void assignAuctionItem(int auction, float price) {
+    public void assignAuctionCost(int auction, float price) {
       // Sometimes hotels can be won for 0, so just set to 1 so that system knows it is owned
       if (price == 0) {
       	price = 1;
