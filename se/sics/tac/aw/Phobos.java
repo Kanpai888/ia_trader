@@ -145,18 +145,15 @@ public class Phobos extends AgentImpl {
 
   private float[] prices;
   private float[] previousPrices;
-  private float[] submittedPrices;
   private float[] currentFlightPrices;
 
   // Store a list of the flights that are being monitored for buying
   private HashMap<Integer, Integer> monitorFlights;
 
   // Store hotel price estimates
-  private float[] cheapHotelEstimates = {
-    60, 70, 100, 60
-  };
+  private float[] cheapHotelEstimates;
   private float[] expensiveHotelEstimates = {
-    100, 150, 300, 150
+    
   };
 
   private ArrayList<Client> clients;
@@ -193,14 +190,18 @@ public class Phobos extends AgentImpl {
     else if (auctionCategory == TACAgent.CAT_HOTEL) {
       // TODO: update estimatedHotelPrices[] when quoteUpdated apart from those set to 9999 (closed auctions)
       // Really basic impl uses current price and adds 50 for the estimates
-      int day = agent.getAuctionDay(auction) - 1; // Need to subtract 1 as array starts at index 0
-      if (agent.getAuctionType(auction) == TACAgent.TYPE_GOOD_HOTEL) {
-        if (expensiveHotelEstimates[day] != 9999) {
-          expensiveHotelEstimates[day] = quote.getAskPrice() + 50;
-        }
-      } else {
-        if (cheapHotelEstimates[day] != 9999) {
-          cheapHotelEstimates[day] = quote.getAskPrice() + 50;
+      // quoteUpdated() gets called setting hotel prices to 0 at 2 seconds in, so wait 15 seconds
+      // before allowing this code to run. Should get a more permanent solution later
+      if (agent.getGameTime() > 15000) {
+        int day = agent.getAuctionDay(auction) - 1; // Need to subtract 1 as array starts at index 0
+        if (agent.getAuctionType(auction) == TACAgent.TYPE_GOOD_HOTEL) {
+          if (expensiveHotelEstimates[day] != 9999) {
+            expensiveHotelEstimates[day] = quote.getAskPrice() + 50;
+          }
+        } else {
+          if (cheapHotelEstimates[day] != 9999) {
+            cheapHotelEstimates[day] = quote.getAskPrice() + 50;
+          }
         }
       }
 
@@ -238,7 +239,9 @@ public class Phobos extends AgentImpl {
     previousPrices[auction] = quote.getAskPrice();
 
     // Recalculate the allocations
-    allocateAndBid();
+    if (agent.getGameTime() > 15000) {
+      allocateAndBid();
+    }
   }
 
   // TODO: Function should set the allocation tables and place the bids. Should use
@@ -280,7 +283,6 @@ public class Phobos extends AgentImpl {
           } else {
             bid.addBidPoint(1, cheapHotelEstimates[i - 1]);
           }
-          submittedPrices[auction] = benefitDifference;
         }
       }
 
@@ -318,7 +320,6 @@ public class Phobos extends AgentImpl {
       if (quantity > 0 && c.needsAuction(auctionNumber)) {
         --quantity;
         c.assignAuctionItem(auctionNumber, price);
-        log.fine("*** Assigned an item");
       }
     }
     // Place any remaining items in unused items
@@ -372,11 +373,20 @@ public class Phobos extends AgentImpl {
   public void gameStarted() {
     log.fine("Game " + agent.getGameID() + " started!");
     previousPrices = new float[agent.getAuctionNo()]; // Reset the previous prices array
-    submittedPrices = new float[agent.getAuctionNo()]; // Reset submitted prices array
     currentFlightPrices = new float[agent.getAuctionNo()]; // Reset flight prices array
     unusedItems = new HashMap<Integer, Integer>(); // Reset unusedItems HashMap
     monitorFlights = new HashMap<Integer, Integer>(); // Reset the flight monitoring
     clients = new ArrayList<Client>();
+    cheapHotelEstimates = new float[4];
+    cheapHotelEstimates[0] = 60;
+    cheapHotelEstimates[1] = 70;
+    cheapHotelEstimates[2] = 100;
+    cheapHotelEstimates[3] = 60;
+    expensiveHotelEstimates = new float[4];
+    expensiveHotelEstimates[0] = 100;
+    expensiveHotelEstimates[1] = 150;
+    expensiveHotelEstimates[2] = 300;
+    expensiveHotelEstimates[3] = 150;
     calculateAllocation();
     sendBids();
   }
@@ -401,7 +411,7 @@ public class Phobos extends AgentImpl {
       // Assign the hotels to clients that want them
       int own = agent.getOwn(auction);
       if (own > 0) {
-        assignItems(auction, submittedPrices[auction], own);
+        assignItems(auction, agent.getQuote(auction).getAskPrice(), own);
       }
     }
 
@@ -755,7 +765,6 @@ public class Phobos extends AgentImpl {
       }
 
       // Negate the hotel bonus if using the cheap hotel
-      // TODO: Check if hotel bonus applies to every day in the trip
       if (hotelType != TACAgent.TYPE_GOOD_HOTEL) {
         hotelBonus = 0;
       }
@@ -793,6 +802,10 @@ public class Phobos extends AgentImpl {
     public int getInFlight() { return inFlight; }
     public int getOutFlight() { return outFlight; }
     public int getHotelType() { return hotelType; }
+    public String toString() {
+      return "Trip for Client " + client.getClientNumber() + " with inFlight: " + inFlight + 
+      ", outFlight: " + outFlight + ", hotelType: " + hotelType + ", utility: " + getUtility();
+    }
 
   } // Trip
 
