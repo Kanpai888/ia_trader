@@ -128,6 +128,7 @@ package se.sics.tac.aw;
 import se.sics.tac.util.ArgEnumerator;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.logging.*;
 
 public class Phobos extends AgentImpl {
@@ -141,9 +142,12 @@ public class Phobos extends AgentImpl {
   private float[] currentFlightPrices;
   
   // Store hotel price estimates
-  private float[] cheapHotelEstimates = new float[]{80,100,100,80};
-  private float[] expensiveHotelEstimates = new float[]{100,150,150,100};
+  private float[] cheapHotelEstimates = new float[]{200,300,300,200};
+  private float[] expensiveHotelEstimates = new float[]{300,400,400,300};
 
+  private ArrayList<Client> clients;
+  private HashMap<Integer, Integer> resources; // stores number won from each auction
+  
   protected void init(ArgEnumerator args) {
     prices = new float[TACAgent.getAuctionNo()];
   }
@@ -213,7 +217,9 @@ public class Phobos extends AgentImpl {
   // game is available (preferences etc).
   public void gameStarted() {
     log.fine("Game " + agent.getGameID() + " started!");
+    currentFlightPrices = new float[TACAgent.getAuctionNo()]; // Reset flight prices array
 
+    clients = new ArrayList<Client>(); //
     calculateAllocation();
     sendBids();
   }
@@ -273,6 +279,9 @@ public class Phobos extends AgentImpl {
   private void calculateAllocation() {
     // Loop through for each of the 8 clients
     for (int i = 0; i < 8; i++) {
+      // Add the client to the ArrayList. Allocations will be dealt with later
+      clients.add(new Client(i));
+    	
       int inFlight = agent.getClientPreference(i, TACAgent.ARRIVAL);
       int outFlight = agent.getClientPreference(i, TACAgent.DEPARTURE);
       int auction;
@@ -509,7 +518,6 @@ public class Phobos extends AgentImpl {
 
     private float calculateUtility() {
       float hotelCost = 0;
-      float result = 0;
       // Get the clients preferred dates and hotel bonus
       int preferredInFlight = client.getInFlight();
       int preferredOutFlight = client.getOutFlight();
