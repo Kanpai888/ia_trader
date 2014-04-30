@@ -307,6 +307,20 @@ public class Phobos extends AgentImpl {
 
     // Place the bids
     for (Bid b : bids) {
+
+      if(agent.getAuctionCategory(b.getAuction()) == TACAgent.CAT_HOTEL){
+        int auction = b.getAuction();
+        Quote quote = agent.getQuote(auction);
+        float askPrice = quote.getAskPrice();
+        int unwanted = quote.getHQW() - b.getQuantity();
+
+        // Adding required number to make bid valid
+        for(int i=0; i < unwanted; i++){
+          b.addBidPoint(1, askPrice + 1);
+        } 
+      }
+
+
       agent.submitBid(b);
     }
     
