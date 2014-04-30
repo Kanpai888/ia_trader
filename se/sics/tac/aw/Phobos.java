@@ -236,10 +236,7 @@ public class Phobos extends AgentImpl {
     // Updated the previous prices array
     previousPrices[auction] = quote.getAskPrice();
 
-    // Recalculate the allocations
-    if (agent.getGameTime() > 15000) {
-      allocateAndBid();
-    }
+    
   }
 
   // TODO: Function should set the allocation tables and place the bids. Should use
@@ -360,6 +357,14 @@ public class Phobos extends AgentImpl {
   // often requested at once).
   public void quoteUpdated(int auctionCategory) {
     // log.fine("All quotes for " + agent.auctionCategoryToString(auctionCategory) + " has been updated");
+    // Recalculate the allocations
+    if (agent.getGameTime() > 15000) {
+
+      if(auctionCategory == TACAgent.CAT_HOTEL){
+        allocateAndBid();
+      }
+      
+    }
   }
 
   // There are TACAgent have received an answer on a bid query/submission
@@ -371,8 +376,14 @@ public class Phobos extends AgentImpl {
 
   // The bid has been rejected (reason is bid.getRejectReason())
   public void bidRejected(Bid bid) {
+    int auction = bid.getAuction();
     log.warning("Bid Rejected: " + bid.getID());
     log.warning("      Reason: " + bid.getRejectReason() + " (" + bid.getRejectReasonAsString() + ')');
+    log.warning("        Type: " + TACAgent.auctionCategoryToString(agent.getAuctionCategory(bid.getAuction()))  );
+    log.warning("Asking Price: " + agent.getQuote(auction).getAskPrice());
+    log.warning("   Bid Price: " + bid.getBidString());
+    log.warning(" Gd Estimate: " + expensiveHotelEstimates[agent.getAuctionDay(auction) - 1]);
+    log.warning(" Bd Estimate: " + cheapHotelEstimates[agent.getAuctionDay(auction) - 1]);
   }
 
   // The bid contained errors (error represent error status - commandStatus)
