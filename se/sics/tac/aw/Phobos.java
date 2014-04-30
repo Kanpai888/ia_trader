@@ -146,7 +146,6 @@ public class Phobos extends AgentImpl {
   private float[] expensiveHotelEstimates = new float[]{180,280,280,180};
 
   private ArrayList<Client> clients;
-  private int[] ownedResource;
   
   protected void init(ArgEnumerator args) {
     prices = new float[TACAgent.getAuctionNo()];
@@ -163,11 +162,10 @@ public class Phobos extends AgentImpl {
 
         // If trend is negative, price going down
         float trend = quote.getAskPrice() - previousPrices[auction];
-        int flightsNeeded = agent.getAllocation(auction) - ownedResource[auction];
+        int flightsNeeded = agent.getAllocation(auction) - agent.getOwn(auction);
         
         if (trend > 0 && flightsNeeded > 0) { // Prices are going up, so buy!
           Bid b = new Bid(auction);
-          ownedResource[auction] = ownedResource[auction] + flightsNeeded;
           b.addBidPoint(flightsNeeded, 1000);
           agent.submitBid(b);
           
@@ -235,10 +233,8 @@ public class Phobos extends AgentImpl {
   // game is available (preferences etc).
   public void gameStarted() {
     log.fine("Game " + agent.getGameID() + " started!");
-    
     currentFlightPrices = new float[TACAgent.getAuctionNo()]; // Reset flight prices array
     previousPrices = new float[TACAgent.getAuctionNo()]; // Reset the previous prices array
-    ownedResource = new int[TACAgent.getAuctionNo()]; // Reset the previous prices array
     
     clients = new ArrayList<Client>(); //
     calculateAllocation();
@@ -281,11 +277,6 @@ public class Phobos extends AgentImpl {
       int alloc = agent.getAllocation(i) - agent.getOwn(i);
       float price = -1f;
       switch (TACAgent.getAuctionCategory(i)) {
-        case TACAgent.CAT_FLIGHT:
-          if (alloc > 0) {
-            price = 1000;
-          }
-          break;
         case TACAgent.CAT_HOTEL:
           if (alloc > 0) {
             price = 200;
