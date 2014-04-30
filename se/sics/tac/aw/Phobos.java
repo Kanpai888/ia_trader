@@ -153,10 +153,10 @@ public class Phobos extends AgentImpl {
 
   // Store hotel price estimates
   private float[] cheapHotelEstimates = {
-    60, 70, 100, 60, 60
+    60, 70, 100, 60
   };
   private float[] expensiveHotelEstimates = {
-    100, 150, 300, 150, 60
+    100, 150, 300, 150
   };
 
   private ArrayList<Client> clients;
@@ -188,8 +188,6 @@ public class Phobos extends AgentImpl {
         // Remove the flights from monitoring and allocate them
         monitorFlights.put(auction, 0);
         assignItems(auction, quote.getAskPrice(), quantity);
-
-        log.fine("*** Bought " + quantity + " flights");
       }
     }
     else if (auctionCategory == TACAgent.CAT_HOTEL) {
@@ -245,7 +243,8 @@ public class Phobos extends AgentImpl {
 
   // TODO: Function should set the allocation tables and place the bids. Should use
   // agent.getOwn(), in case system crashes. On restart, it will buy everything again!
-  // Also needs to use Bid.addBidPoint(). Can't use multiple Bids
+  // Needs to factor in bids already submitted when changing trip somehow. Probably
+  // compare price bid with asking price to see if will win or something
   private void allocateAndBid() {
     ArrayList<Bid> bids = new ArrayList<Bid>(); // Stores the bids which are placed at the end of the function
 
@@ -277,9 +276,9 @@ public class Phobos extends AgentImpl {
             bids.add(bid);
           }
           if (t.getHotelType() == TACAgent.TYPE_GOOD_HOTEL) {
-            bid.addBidPoint(1, expensiveHotelEstimates[i]);
+            bid.addBidPoint(1, expensiveHotelEstimates[i - 1]);
           } else {
-            bid.addBidPoint(1, cheapHotelEstimates[i]);
+            bid.addBidPoint(1, cheapHotelEstimates[i - 1]);
           }
           submittedPrices[auction] = benefitDifference;
         }
@@ -751,7 +750,7 @@ public class Phobos extends AgentImpl {
       	if (clientCosts[auction] > 0) { // If the client already owns the hotel
       	  hotelCost += clientCosts[auction];
       	} else {// Don't own the hotel, use the estimated price
-      	  hotelCost += estimatedHotelPrices[i];
+      	  hotelCost += estimatedHotelPrices[i - 1];
       	}
       }
 
