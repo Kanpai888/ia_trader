@@ -141,8 +141,8 @@ public class Phobos extends AgentImpl {
   private float[] currentFlightPrices;
   
   // Store hotel price estimates
-  private float[] cheapHotelEstimates = new float[]{60,70,100,60};
-  private float[] expensiveHotelEstimates = new float[]{100,150,300,150};
+  private float[] cheapHotelEstimates = new float[]{80,100,100,80};
+  private float[] expensiveHotelEstimates = new float[]{100,150,150,100};
 
   protected void init(ArgEnumerator args) {
     prices = new float[TACAgent.getAuctionNo()];
@@ -275,35 +275,13 @@ public class Phobos extends AgentImpl {
     for (int i = 0; i < 8; i++) {
       int inFlight = agent.getClientPreference(i, TACAgent.ARRIVAL);
       int outFlight = agent.getClientPreference(i, TACAgent.DEPARTURE);
-      int hotel = agent.getClientPreference(i, TACAgent.HOTEL_VALUE);
-      int type;
-
-      // Get the flight preferences auction and remember that we are
-      // going to buy tickets for these days. (inflight=1, outflight=0)
-      int auction = TACAgent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, inFlight);
-      agent.setAllocation(auction, agent.getAllocation(auction) + 1);
-      auction = TACAgent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
-      agent.setAllocation(auction, agent.getAllocation(auction) + 1);
-
-      // If the client's hotel_bonus is greater than 70 we will select the
-      // expensive hotel (type = 1)
-      if (hotel > 70) {
-        type = TACAgent.TYPE_GOOD_HOTEL;
-      } else {
-        type = TACAgent.TYPE_CHEAP_HOTEL;
-      }
-      // Allocate a hotel night for each day that the client stays
-      for (int d = inFlight; d < outFlight; d++) {
-        auction = TACAgent.getAuctionFor(TACAgent.CAT_HOTEL, type, d);
-        log.finer("Adding hotel for day: " + d + " on " + auction);
-        agent.setAllocation(auction, agent.getAllocation(auction) + 1);
-      }
+      int auction;
 
       // Allocate a different entertainment for each day the client stays
       int eType = -1;
       while((eType = nextEntType(i, eType)) > 0) {
         auction = bestEntDay(inFlight, outFlight, eType);
-        log.finer("Adding entertainment " + eType + " on " + auction);
+//        log.finer("Adding entertainment " + eType + " on " + auction);
         agent.setAllocation(auction, agent.getAllocation(auction) + 1);
       }
     }
