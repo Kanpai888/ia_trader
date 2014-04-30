@@ -412,14 +412,14 @@ public class Phobos extends AgentImpl {
     private int hotelBonus;
     private ArrayList<Trip> possibleTrips;
     private Trip selectedTrip;
-    private float[] assignedAuctions; // Stores the price of all aucitons won for this client
+    private float[] assignedCosts; // Stores the price of all aucitons won for this client
     private boolean tripFufilled;
     
     public Client(int clientNumber) {
       // Initialise vars
       tripFufilled = false;
       possibleTrips = new ArrayList<Trip>();
-      assignedAuctions = new float[TACAgent.getAuctionNo()];
+      assignedCosts = new float[TACAgent.getAuctionNo()];
 
       this.clientNumber = clientNumber;
       // Use client number to get and store preferences
@@ -484,7 +484,7 @@ public class Phobos extends AgentImpl {
       if (price == 0) {
       	price = 1;
       }
-      assignedAuctions[auction] = price;
+      assignedCosts[auction] = price;
       log.fine("*** Client " + clientNumber + " has been allocated Auction ID " + auction + " sold at " + price);
     }
 
@@ -571,7 +571,7 @@ public class Phobos extends AgentImpl {
     public int getInFlight() { return preferredInFlight; }
     public int getOutFlight() { return preferredOutFlight; }
     public int getHotelBonus() { return hotelBonus; }
-    public float[] getAssignedAuctions() { return assignedAuctions; }
+    public float[] getAssignedCosts() { return assignedCosts; }
 
   } // Client
 
@@ -614,7 +614,7 @@ public class Phobos extends AgentImpl {
       float hotelBonus = client.getHotelBonus();
 
       // Also get the items owned by the client, and the prices paid
-      float[] clientCosts = client.getAssignedAuctions();
+      float[] clientCosts = client.getAssignedCosts();
 
       // Calculate the penalty when using these flight dates
       float travelPenalty = (inFlight - preferredInFlight) * 100;
