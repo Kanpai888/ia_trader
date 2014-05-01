@@ -678,11 +678,10 @@ private ArrayList<Client> clients;
       for (int i = inFlight; i < outFlight; ++i) {
       	// Need to get auction number to check if client owns hotel
       	auction = TACAgent.getAuctionFor(TACAgent.CAT_HOTEL, hotelType, i);
-      	if (clientCosts[auction] > 0) { // If the client already owns the hotel
-      	  hotelCost += clientCosts[auction];
-      	} else {// Don't own the hotel, use the estimated price
-      	  hotelCost += estimatedHotelPrices[i - 1];
-      	}
+      	if(agent.getAllocation(auction) <= agent.getOwn(auction)){
+      		// Only apply hotel cost, if we need to buy a hotel
+      		hotelCost += estimatedHotelPrices[i - 1];
+        }
       }
 
       // Negate the hotel bonus if using the cheap hotel
@@ -690,21 +689,12 @@ private ArrayList<Client> clients;
         hotelBonus = 0;
       }
 
+      // TODO Entertainment utlity?
       // Ideally we'd have something about the entertainment here, but I have
       // no idea what to do with that. Maybe Ryan can add something?
 
-      // Concept of subtracting cost of items bought, but not used in this trip
-      // For every item in clientCosts, checks if auction is used in this trip. If not,
-      // it adds it to the cost of the trip
-      float alreadyBoughtCost = 0;
-      for (int i = 0; i < clientCosts.length; ++i) {
-      	if (i > 0 && !auctions.contains(i)) {
-      		alreadyBoughtCost += clientCosts[i];
-      	}
-      }
-
       // Calculate the overall utility of this trip
-      return 1000 - travelPenalty - flightCost - hotelCost + hotelBonus - alreadyBoughtCost;
+      return 1000 - travelPenalty - flightCost - hotelCost + hotelBonus;
     }
  
     // Method to return whether a hotel is used in this trip or not. Will be used
