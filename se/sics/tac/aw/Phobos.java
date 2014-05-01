@@ -180,11 +180,16 @@ public class Phobos extends AgentImpl {
       if(alloc > 0){
     	  hotelBid.addBidPoint(alloc, prices[auction]);
       }
+      
+      // Compulsary bid at lowest value
       int unwanted = quote.getHQW() - alloc;
       if(unwanted > 0){
     	  hotelBid.addBidPoint(unwanted, quote.getAskPrice() + 1);
       }
-      agent.submitBid(hotelBid);
+      if(alloc + unwanted > 0){
+    	  // Only bid, if you have something to bid for
+    	  agent.submitBid(hotelBid);
+      }
 
     } else if (auctionCategory == TACAgent.CAT_ENTERTAINMENT) {
       int alloc = agent.getAllocation(auction) - agent.getOwn(auction);
