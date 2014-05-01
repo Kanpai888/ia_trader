@@ -657,13 +657,13 @@ private ArrayList<Client> clients;
       // use the price paid
       float flightCost = 0;
       int auction = TACAgent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, inFlight);
-      if(agent.getAllocation(auction) <= agent.getOwn(auction)){
+      if(agent.getAllocation(auction) >= agent.getOwn(auction)){
     	  // Only apply inbound flight cost, if we need to buy a flight
     	  flightCost += currentFlightPrices[auction];
       }
       
       auction = TACAgent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
-      if(agent.getAllocation(auction) <= agent.getOwn(auction)){
+      if(agent.getAllocation(auction) >= agent.getOwn(auction)){
     	  // Only apply outbound flight cost, if we need to buy a flight
     	  flightCost += currentFlightPrices[auction];
       }
@@ -674,7 +674,7 @@ private ArrayList<Client> clients;
       for (int i = inFlight; i < outFlight; ++i) {
       	// Need to get auction number to check if client owns hotel
       	auction = TACAgent.getAuctionFor(TACAgent.CAT_HOTEL, hotelType, i);
-      	if(agent.getAllocation(auction) <= agent.getOwn(auction)){
+      	if(agent.getAllocation(auction) >= agent.getOwn(auction)){
       		// Only apply hotel cost, if we need to buy a hotel
       		hotelCost += estimatedHotelPrices[i - 1];
         }
