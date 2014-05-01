@@ -250,6 +250,10 @@ public class Phobos extends AgentImpl {
     //Clients to a list of days which have been assigned
     HashMap<Client, ArrayList<Integer>> assignedDays = new HashMap<Client, ArrayList<Integer>>(8);
     
+    for (int i = 0; i < 8; i++) {
+      assignedDays.put(tempClients.get(i), new ArrayList<Integer>());
+    }
+    
     //ENTERTAINMENT TYPE ONE
     Collections.sort(tempClients, new ClientEntertainmentOneComparator());
     //tickets available each day
@@ -357,8 +361,14 @@ public class Phobos extends AgentImpl {
     //hold temp list of clients
     ArrayList<Client> tempClients = new ArrayList<Client>(clients);
     
+    //if (tempClients.size() == 0) { return 0; }
+    
     //Clients to a list of days which have been assigned
     HashMap<Client, ArrayList<Integer>> assignedDays = new HashMap<Client, ArrayList<Integer>>(8);
+    
+    for (int i = 0; i < 8; i++) {
+      assignedDays.put(tempClients.get(i), new ArrayList<Integer>());
+    }
     
     //ENTERTAINMENT TYPE ONE
     Collections.sort(tempClients, new ClientEntertainmentOneComparator());
@@ -464,7 +474,7 @@ public class Phobos extends AgentImpl {
 //    log.fine("All quotes for " + TACAgent.auctionCategoryToString(auctionCategory) + " has been updated");
 	  
 	  // We only initialise the allocation table after we get the first set of flight prices
-	  if(isInitialised == false && auctionCategory == TACAgent.CAT_FLIGHT){
+	  if(isInitialised == false && auctionCategory == TACAgent.CAT_FLIGHT && agent.getGameTime() > 15000){
 		  isInitialised = true;
 		  calculateAllocation();
 		  sendBids();
@@ -818,9 +828,12 @@ public class Phobos extends AgentImpl {
      */
     private Trip getOptimalTrip() {
       Trip currentHighest = possibleTrips.get(0);
+      float currentHighestUtility = 0;
       for (Trip t : possibleTrips) {
-        if (t.getUtility() > currentHighest.getUtility()) {
+        float tempUtil = t.getUtility();
+        if (tempUtil > currentHighestUtility) {
           currentHighest = t;
+          currentHighestUtility = tempUtil;
         }
       }
       return currentHighest;
