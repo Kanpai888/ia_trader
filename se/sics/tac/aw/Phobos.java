@@ -194,11 +194,11 @@ private ArrayList<Client> clients;
       }
 
     } else if (auctionCategory == TACAgent.CAT_ENTERTAINMENT) {
-      int alloc = agent.getAllocation(auction) - agent.getOwn(auction);
+      /*int alloc = agent.getAllocation(auction) - agent.getOwn(auction);
       if (alloc != 0) {
         Bid bid = new Bid(auction);
         if (alloc < 0) { // If we have more than we need
-          prices[auction] = 200f - (agent.getGameTime() * 120f) / 720000; // Set a negative price
+          prices[auction] = 200f - (agent.getGameTime() * 120f) / 720000; // Set a negative allocation - price is positive
         } else { // Otherwise, create a bid
           prices[auction] = 50f + (agent.getGameTime() * 100f) / 720000;
         }
@@ -207,7 +207,24 @@ private ArrayList<Client> clients;
           log.finest("submitting bid with alloc=" + agent.getAllocation(auction) + " own=" + agent.getOwn(auction));
         }
         agent.submitBid(bid);
+      }*/
+      
+      int owned = agent.getOwn(auction); //number of tickets of this type owned
+      int alloc = agent.getAllocation(auction); //number of tickets of this type allocated
+      Bid bid = new Bid(auction);
+      //sell all unallocated tickets for 101
+      //since if agents spend over 100 on a ticket
+      //the bonus they get must be less than 100
+      //and the amount we gain is greater than 100
+      bid.addBidPoint(alloc - owned, 101f);
+      
+      //for all allocated tickets
+      for (int ticketNo = 0; ticketNo < alloc; ticketNo++) {
+      
+        
+        
       }
+      
     }
     previousPrices[auction] = quote.getAskPrice();
   }
