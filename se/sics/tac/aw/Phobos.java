@@ -222,7 +222,7 @@ private ArrayList<Client> clients;
 	  if(isInitialised == false && auctionCategory == TACAgent.CAT_FLIGHT){
 		  isInitialised = true;
 		  calculateAllocation();
-		  sendBids();
+		  sendInitialBids();
 	  }
   }
 
@@ -339,7 +339,7 @@ private ArrayList<Client> clients;
   }
 
   // Sends initial bids
-  private void sendBids() {
+  private void sendInitialBids() {
     for (int i = 0, n = TACAgent.getAuctionNo(); i < n; i++) {
       int alloc = agent.getAllocation(i) - agent.getOwn(i);
       float price = -1f;
@@ -495,8 +495,8 @@ private ArrayList<Client> clients;
     public void evaluateFufillness(ArrayList<Integer> resources){
     	boolean fufilled = true;
     	for(int wanted: selectedTrip.getAuctions()){
-    		if(resources.contains(wanted)){
-    			resources.remove(wanted);
+    		if(resources.contains(new Integer(wanted))){
+    			resources.remove(new Integer(wanted));
     		}else{
     			fufilled = false;
     		}
