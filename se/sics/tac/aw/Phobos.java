@@ -174,17 +174,18 @@ public class Phobos extends AgentImpl {
         }
     } else if (auctionCategory == TACAgent.CAT_HOTEL) {
       int alloc = agent.getAllocation(auction); // Allocation is number of items wanted from this auction
-      /* If there are any to be won, and the Hypothetical Quantity Won is less than the amount needed */
-      if (alloc > 0 && quote.hasHQW(agent.getBid(auction)) && quote.getHQW() < alloc) {
-        Bid bid = new Bid(auction);
-        // Can not own anything in hotel auctions...
-        prices[auction] = quote.getAskPrice() + 50;
-        bid.addBidPoint(alloc, prices[auction]);
-        if (DEBUG) {
-          log.finest("submitting bid with alloc=" + agent.getAllocation(auction) + " own=" + agent.getOwn(auction));
-        }
-        agent.submitBid(bid);
+      prices[auction] = quote.getAskPrice() + 50;
+      
+      Bid hotelBid = new Bid(auction);
+      if(alloc > 0){
+    	  hotelBid.addBidPoint(alloc, prices[auction]);
       }
+      int unwanted = quote.getHQW() - alloc;
+      if(unwanted > 0){
+    	  hotelBid.addBidPoint(unwanted, quote.getAskPrice() + 1);
+      }
+      agent.submitBid(hotelBid);
+
     } else if (auctionCategory == TACAgent.CAT_ENTERTAINMENT) {
       int alloc = agent.getAllocation(auction) - agent.getOwn(auction);
       if (alloc != 0) {
