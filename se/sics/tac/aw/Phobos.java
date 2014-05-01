@@ -219,7 +219,7 @@ public class Phobos extends AgentImpl {
       //since if agents spend over 100 on a ticket
       //the bonus they get must be less than 100
       //and the amount we gain is greater than 100
-      if (alloc - owned != 0) {
+      if (alloc < owned) {
         bid.addBidPoint(alloc - owned, 101f);
       }
       
@@ -261,11 +261,11 @@ public class Phobos extends AgentImpl {
       agent.setAllocation(auction, 0);
     }
     //iterate through clients
-    for (int i = tempClients.size() - 1; i >= 0; i++) {
+    for (int i = tempClients.size() - 1; i >= 0; i--) {
       //initialise the client to next day map
       Trip currentTrip = tempClients.get(i).getSelectedTrip();
       //for all days in the trip
-      for (int d = currentTrip.getInFlight(); d < currentTrip.getOutFlight(); d++) {
+      for (int d = currentTrip.getInFlight() - 1; d < currentTrip.getOutFlight() - 1; d++) {
         if (!assignedDays.get(tempClients.get(i)).contains((Integer) d) && ticketsAvailablePerDay[d] > 0) {
           //updating used tickets
           assignedDays.get(tempClients.get(i)).add(d);
@@ -282,7 +282,7 @@ public class Phobos extends AgentImpl {
     }
     
     //ENTERTAINMENT TYPE TWO
-    Collections.sort(tempClients, new ClientEntertainmentOneComparator());
+    Collections.sort(tempClients, new ClientEntertainmentTwoComparator());
     //tickets available each day
     ticketsAvailablePerDay = new int[4];
     for (int i = 0; i < 4; i++) {
@@ -292,11 +292,11 @@ public class Phobos extends AgentImpl {
       agent.setAllocation(auction, 0);
     }
     //iterate through clients
-    for (int i = tempClients.size() - 1; i >= 0; i++) {
+    for (int i = tempClients.size() - 1; i >= 0; i--) {
       //initialise the client to next day map
       Trip currentTrip = tempClients.get(i).getSelectedTrip();
       //for all days in the trip
-      for (int d = currentTrip.getInFlight(); d < currentTrip.getOutFlight(); d++) {
+      for (int d = currentTrip.getInFlight() - 1; d < currentTrip.getOutFlight() - 1; d++) {
         if (!assignedDays.get(tempClients.get(i)).contains((Integer) d) && ticketsAvailablePerDay[d] > 0) {
           //updating used tickets
           assignedDays.get(tempClients.get(i)).add(d);
@@ -313,7 +313,7 @@ public class Phobos extends AgentImpl {
     }
     
     //ENTERTAINMENT TYPE THREE
-    Collections.sort(tempClients, new ClientEntertainmentOneComparator());
+    Collections.sort(tempClients, new ClientEntertainmentThreeComparator());
     //tickets available each day
     ticketsAvailablePerDay = new int[4];
     for (int i = 0; i < 4; i++) {
@@ -323,11 +323,11 @@ public class Phobos extends AgentImpl {
       agent.setAllocation(auction, 0);
     }
     //iterate through clients
-    for (int i = tempClients.size() - 1; i >= 0; i++) {
+    for (int i = tempClients.size() - 1; i >= 0; i--) {
       //initialise the client to next day map
       Trip currentTrip = tempClients.get(i).getSelectedTrip();
       //for all days in the trip
-      for (int d = currentTrip.getInFlight(); d < currentTrip.getOutFlight(); d++) {
+      for (int d = currentTrip.getInFlight() - 1; d < currentTrip.getOutFlight() - 1; d++) {
         if (!assignedDays.get(tempClients.get(i)).contains((Integer) d) && ticketsAvailablePerDay[d] > 0) {
           //updating used tickets
           assignedDays.get(tempClients.get(i)).add(d);
@@ -369,7 +369,7 @@ public class Phobos extends AgentImpl {
       ticketsAvailablePerDay[i] = agent.getOwn(auction);
     }
     //iterate through clients
-    for (int i = tempClients.size() - 1; i >= 0; i++) {
+    for (int i = tempClients.size() - 1; i >= 0; i--) {
       //initialise the client to next day map
       Trip currentTrip = tempClients.get(i).getSelectedTrip();
       
@@ -378,7 +378,7 @@ public class Phobos extends AgentImpl {
       }
       
       //for all days in the trip
-      for (int d = currentTrip.getInFlight(); d < currentTrip.getOutFlight(); d++) {
+      for (int d = currentTrip.getInFlight() - 1; d < currentTrip.getOutFlight() - 1; d++) {
         if (!assignedDays.get(tempClients.get(i)).contains((Integer) d) && ticketsAvailablePerDay[d] > 0) {
           //updating used tickets
           assignedDays.get(tempClients.get(i)).add(d);
@@ -393,7 +393,7 @@ public class Phobos extends AgentImpl {
     }
     
     //ENTERTAINMENT TYPE TWO
-    Collections.sort(tempClients, new ClientEntertainmentOneComparator());
+    Collections.sort(tempClients, new ClientEntertainmentTwoComparator());
     //tickets available each day
     ticketsAvailablePerDay = new int[4];
     for (int i = 0; i < 4; i++) {
@@ -401,7 +401,7 @@ public class Phobos extends AgentImpl {
       ticketsAvailablePerDay[i] = agent.getOwn(auction);
     }
     //iterate through clients
-    for (int i = tempClients.size() - 1; i >= 0; i++) {
+    for (int i = tempClients.size() - 1; i >= 0; i--) {
       //initialise the client to next day map
       Trip currentTrip = tempClients.get(i).getSelectedTrip();
       
@@ -410,7 +410,7 @@ public class Phobos extends AgentImpl {
       }
       
       //for all days in the trip
-      for (int d = currentTrip.getInFlight(); d < currentTrip.getOutFlight(); d++) {
+      for (int d = currentTrip.getInFlight() - 1; d < currentTrip.getOutFlight() - 1; d++) {
         if (!assignedDays.get(tempClients.get(i)).contains((Integer) d) && ticketsAvailablePerDay[d] > 0) {
           //updating used tickets
           assignedDays.get(tempClients.get(i)).add(d);
@@ -424,7 +424,7 @@ public class Phobos extends AgentImpl {
     }
     
     //ENTERTAINMENT TYPE THREE
-    Collections.sort(tempClients, new ClientEntertainmentOneComparator());
+    Collections.sort(tempClients, new ClientEntertainmentThreeComparator());
     //tickets available each day
     ticketsAvailablePerDay = new int[4];
     for (int i = 0; i < 4; i++) {
@@ -432,7 +432,7 @@ public class Phobos extends AgentImpl {
       ticketsAvailablePerDay[i] = agent.getOwn(auction);
     }
     //iterate through clients
-    for (int i = tempClients.size() - 1; i >= 0; i++) {
+    for (int i = tempClients.size() - 1; i >= 0; i--) {
       //initialise the client to next day map
       Trip currentTrip = tempClients.get(i).getSelectedTrip();
       
@@ -441,7 +441,7 @@ public class Phobos extends AgentImpl {
       }
       
       //for all days in the trip
-      for (int d = currentTrip.getInFlight(); d < currentTrip.getOutFlight(); d++) {
+      for (int d = currentTrip.getInFlight() - 1; d < currentTrip.getOutFlight() - 1; d++) {
         if (!assignedDays.get(tempClients.get(i)).contains((Integer) d) && ticketsAvailablePerDay[d] > 0) {
           //updating used tickets
           assignedDays.get(tempClients.get(i)).add(d);
@@ -645,6 +645,7 @@ public class Phobos extends AgentImpl {
       clients.add(new Client(i, eBonus));
       
     }
+    updateAllEntertainmentBonuses();
   }
 
   private int bestEntDay(int inFlight, int outFlight, int type) {
