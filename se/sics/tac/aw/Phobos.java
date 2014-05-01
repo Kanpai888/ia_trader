@@ -219,7 +219,7 @@ private ArrayList<Client> clients;
 //    log.fine("All quotes for " + TACAgent.auctionCategoryToString(auctionCategory) + " has been updated");
 	  
 	  // We only initialise the allocation table after we get the first set of flight prices
-	  if(isInitialised == false && auctionCategory == TACAgent.CAT_FLIGHT){
+	  if(agent.getGameTime() > 15000 && isInitialised == false && auctionCategory == TACAgent.CAT_FLIGHT){
 		  isInitialised = true;
 		  calculateAllocation();
 		  sendInitialBids();
@@ -499,15 +499,15 @@ private ArrayList<Client> clients;
     public void evaluateFufillness(ArrayList<Integer> resources){
     	boolean fufilled = true;
     	
-    	log.fine("----------------------");
-    	log.fine(resources.toString());
-    	log.fine("Check for: "+selectedTrip.getAuctions());
+//    	log.fine("----------------------");
+//    	log.fine(resources.toString());
+//    	log.fine("Check for: "+selectedTrip.getAuctions());
     	for(int wanted: selectedTrip.getAuctions()){
     		if(resources.contains(new Integer(wanted))){
     			resources.remove(new Integer(wanted));
     		}else{
     			fufilled = false;
-    			log.fine("Missing: "+wanted);
+//    			log.fine("Missing: "+wanted);
     		}
     	}
     	this.tripFufilled = fufilled;
@@ -529,7 +529,7 @@ private ArrayList<Client> clients;
       assignedCosts[auction] = price;
       log.fine("*** Client " + clientNumber + " has been allocated Auction ID " + auction + " sold at " + price);
     }
-
+    
     /**
      * Create every possible permutation of client trip and stores it
      */
