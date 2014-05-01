@@ -128,7 +128,10 @@ package se.sics.tac.aw;
 import se.sics.tac.util.ArgEnumerator;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.logging.*;
+import java.util.Comparator;
+import java.util.Collections;
 
 public class Phobos extends AgentImpl {
 
@@ -147,7 +150,7 @@ public class Phobos extends AgentImpl {
 
   private boolean isInitialised = false;
 
-private ArrayList<Client> clients;
+  private ArrayList<Client> clients;
   
   protected void init(ArgEnumerator args) {
     prices = new float[TACAgent.getAuctionNo()];
@@ -194,11 +197,11 @@ private ArrayList<Client> clients;
       }
 
     } else if (auctionCategory == TACAgent.CAT_ENTERTAINMENT) {
-      int alloc = agent.getAllocation(auction) - agent.getOwn(auction);
+      /*int alloc = agent.getAllocation(auction) - agent.getOwn(auction);
       if (alloc != 0) {
         Bid bid = new Bid(auction);
         if (alloc < 0) { // If we have more than we need
-          prices[auction] = 200f - (agent.getGameTime() * 120f) / 720000; // Set a negative price
+          prices[auction] = 200f - (agent.getGameTime() * 120f) / 720000; // Set a negative allocation - price is positive
         } else { // Otherwise, create a bid
           prices[auction] = 50f + (agent.getGameTime() * 100f) / 720000;
         }
@@ -207,11 +210,263 @@ private ArrayList<Client> clients;
           log.finest("submitting bid with alloc=" + agent.getAllocation(auction) + " own=" + agent.getOwn(auction));
         }
         agent.submitBid(bid);
+      }*/
+      
+      int owned = agent.getOwn(auction); //number of tickets of this type owned
+      int alloc = agent.getAllocation(auction); //number of tickets of this type allocated
+      Bid bid = new Bid(auction);
+      //sell all unallocated tickets for 101
+      //since if agents spend over 100 on a ticket
+      //the bonus they get must be less than 100
+      //and the amount we gain is greater than 100
+      if (alloc < owned) {
+        bid.addBidPoint(alloc - owned, 101f);
       }
+      
+      //for all allocated tickets
+      for (int ticketNo = 0; ticketNo < alloc; ticketNo++) {
+        
+        
+        
+      }
+      
+      agent.submitBid(bid);
     }
     previousPrices[auction] = quote.getAskPrice();
   }
-
+  
+  /**
+   * Update all of the entertainment bonus values in the HashMap
+   */
+  private void updateAllEntertainmentBonuses() {
+    //set entertainment bonuses to 0
+    for (Client c : clients) {
+      c.setCurrentEntertainmentBonus(0);
+    }
+    
+    //hold temp list of clients
+    ArrayList<Client> tempClients = new ArrayList<Client>(clients);
+    
+    //Clients to a list of days which have been assigned
+    HashMap<Client, ArrayList<Integer>> assignedDays = new HashMap<Client, ArrayList<Integer>>(8);
+    
+    for (int i = 0; i < 8; i++) {
+      assignedDays.put(tempClients.get(i), new ArrayList<Integer>());
+    }
+    
+    //ENTERTAINMENT TYPE ONE
+    Collections.sort(tempClients, new ClientEntertainmentOneComparator());
+    //tickets available each day
+    int[] ticketsAvailablePerDay = new int[4];
+    for (int i = 0; i < 4; i++) {
+      int auction = agent.getAuctionFor(agent.CAT_ENTERTAINMENT, agent.TYPE_ALLIGATOR_WRESTLING, i);
+      ticketsAvailablePerDay[i] = agent.getOwn(auction);
+      //remove all allocations from the allocation table
+      agent.setAllocation(auction, 0);
+    }
+    //iterate through clients
+    for (int i = tempClients.size() - 1; i >= 0; i--) {
+      //initialise the client to next day map
+      Trip currentTrip = tempClients.get(i).getSelectedTrip();
+      //for all days in the trip
+      for (int d = currentTrip.getInFlight() - 1; d < currentTrip.getOutFlight() - 1; d++) {
+        if (!assignedDays.get(tempClients.get(i)).contains((Integer) d) && ticketsAvailablePerDay[d] > 0) {
+          //updating used tickets
+          assignedDays.get(tempClients.get(i)).add(d);
+          ticketsAvailablePerDay[d]--;
+          //update allocation table
+          int auction = agent.getAuctionFor(agent.CAT_ENTERTAINMENT, agent.TYPE_ALLIGATOR_WRESTLING, i);
+          int currentAlloc = agent.getAllocation(auction);
+          agent.setAllocation(auction, currentAlloc + 1);
+          //update client detail
+          int bonus = agent.getClientPreference(tempClients.get(i).getClientNumber(), agent.E1);
+          clients.get(tempClients.get(i).getClientNumber()).increaseCurrentEntertainmentBonus(bonus);
+        }
+      }
+    }
+    
+    //ENTERTAINMENT TYPE TWO
+    Collections.sort(tempClients, new ClientEntertainmentTwoComparator());
+    //tickets available each day
+    ticketsAvailablePerDay = new int[4];
+    for (int i = 0; i < 4; i++) {
+      int auction = agent.getAuctionFor(agent.CAT_ENTERTAINMENT, agent.TYPE_AMUSEMENT, i);
+      ticketsAvailablePerDay[i] = agent.getOwn(auction);
+      //remove all allocations from the allocation table
+      agent.setAllocation(auction, 0);
+    }
+    //iterate through clients
+    for (int i = tempClients.size() - 1; i >= 0; i--) {
+      //initialise the client to next day map
+      Trip currentTrip = tempClients.get(i).getSelectedTrip();
+      //for all days in the trip
+      for (int d = currentTrip.getInFlight() - 1; d < currentTrip.getOutFlight() - 1; d++) {
+        if (!assignedDays.get(tempClients.get(i)).contains((Integer) d) && ticketsAvailablePerDay[d] > 0) {
+          //updating used tickets
+          assignedDays.get(tempClients.get(i)).add(d);
+          ticketsAvailablePerDay[d]--;
+          //update allocation table
+          int auction = agent.getAuctionFor(agent.CAT_ENTERTAINMENT, agent.TYPE_AMUSEMENT, i);
+          int currentAlloc = agent.getAllocation(auction);
+          agent.setAllocation(auction, currentAlloc + 1);
+          //update client detail
+          int bonus = agent.getClientPreference(tempClients.get(i).getClientNumber(), agent.E2);
+          clients.get(tempClients.get(i).getClientNumber()).increaseCurrentEntertainmentBonus(bonus);
+        }
+      }
+    }
+    
+    //ENTERTAINMENT TYPE THREE
+    Collections.sort(tempClients, new ClientEntertainmentThreeComparator());
+    //tickets available each day
+    ticketsAvailablePerDay = new int[4];
+    for (int i = 0; i < 4; i++) {
+      int auction = agent.getAuctionFor(agent.CAT_ENTERTAINMENT, agent.TYPE_MUSEUM, i);
+      ticketsAvailablePerDay[i] = agent.getOwn(auction);
+      //remove all allocations from the allocation table
+      agent.setAllocation(auction, 0);
+    }
+    //iterate through clients
+    for (int i = tempClients.size() - 1; i >= 0; i--) {
+      //initialise the client to next day map
+      Trip currentTrip = tempClients.get(i).getSelectedTrip();
+      //for all days in the trip
+      for (int d = currentTrip.getInFlight() - 1; d < currentTrip.getOutFlight() - 1; d++) {
+        if (!assignedDays.get(tempClients.get(i)).contains((Integer) d) && ticketsAvailablePerDay[d] > 0) {
+          //updating used tickets
+          assignedDays.get(tempClients.get(i)).add(d);
+          ticketsAvailablePerDay[d]--;
+          //update allocation table
+          int auction = agent.getAuctionFor(agent.CAT_ENTERTAINMENT, agent.TYPE_MUSEUM, i);
+          int currentAlloc = agent.getAllocation(auction);
+          agent.setAllocation(auction, currentAlloc + 1);
+          //update client detail
+          int bonus = agent.getClientPreference(tempClients.get(i).getClientNumber(), agent.E3);
+          clients.get(tempClients.get(i).getClientNumber()).increaseCurrentEntertainmentBonus(bonus);
+        }
+      }
+    }
+  }
+  
+  /**
+   * Gets the optimal entertainment bonus for a trip
+   * @param clientId The clientNumber which is used for this calculation
+   * @param trip The trip object to use
+   * @return int The optimal bonus
+   */
+  private int getOptimalEntertainmentBonusForTrip(int clientId, Trip trip) {
+    
+    int mainClientBonus = 0;
+    
+    //hold temp list of clients
+    ArrayList<Client> tempClients = new ArrayList<Client>(clients);
+    
+    //if (tempClients.size() == 0) { return 0; }
+    
+    //Clients to a list of days which have been assigned
+    HashMap<Client, ArrayList<Integer>> assignedDays = new HashMap<Client, ArrayList<Integer>>(8);
+    
+    for (int i = 0; i < 8; i++) {
+      assignedDays.put(tempClients.get(i), new ArrayList<Integer>());
+    }
+    
+    //ENTERTAINMENT TYPE ONE
+    Collections.sort(tempClients, new ClientEntertainmentOneComparator());
+    //tickets available each day
+    int[] ticketsAvailablePerDay = new int[4];
+    for (int i = 0; i < 4; i++) {
+      int auction = agent.getAuctionFor(agent.CAT_ENTERTAINMENT, agent.TYPE_ALLIGATOR_WRESTLING, i);
+      ticketsAvailablePerDay[i] = agent.getOwn(auction);
+    }
+    //iterate through clients
+    for (int i = tempClients.size() - 1; i >= 0; i--) {
+      //initialise the client to next day map
+      Trip currentTrip = tempClients.get(i).getSelectedTrip();
+      
+      if (tempClients.get(i).getClientNumber() == clientId) {
+        currentTrip = trip;
+      }
+      
+      //for all days in the trip
+      for (int d = currentTrip.getInFlight() - 1; d < currentTrip.getOutFlight() - 1; d++) {
+        if (!assignedDays.get(tempClients.get(i)).contains((Integer) d) && ticketsAvailablePerDay[d] > 0) {
+          //updating used tickets
+          assignedDays.get(tempClients.get(i)).add(d);
+          ticketsAvailablePerDay[d]--;
+          
+          if (tempClients.get(i).getClientNumber() == clientId) {
+            mainClientBonus += agent.getClientPreference(tempClients.get(i).getClientNumber(), agent.E1);
+          }
+          
+        }
+      }
+    }
+    
+    //ENTERTAINMENT TYPE TWO
+    Collections.sort(tempClients, new ClientEntertainmentTwoComparator());
+    //tickets available each day
+    ticketsAvailablePerDay = new int[4];
+    for (int i = 0; i < 4; i++) {
+      int auction = agent.getAuctionFor(agent.CAT_ENTERTAINMENT, agent.TYPE_AMUSEMENT, i);
+      ticketsAvailablePerDay[i] = agent.getOwn(auction);
+    }
+    //iterate through clients
+    for (int i = tempClients.size() - 1; i >= 0; i--) {
+      //initialise the client to next day map
+      Trip currentTrip = tempClients.get(i).getSelectedTrip();
+      
+      if (tempClients.get(i).getClientNumber() == clientId) {
+        currentTrip = trip;
+      }
+      
+      //for all days in the trip
+      for (int d = currentTrip.getInFlight() - 1; d < currentTrip.getOutFlight() - 1; d++) {
+        if (!assignedDays.get(tempClients.get(i)).contains((Integer) d) && ticketsAvailablePerDay[d] > 0) {
+          //updating used tickets
+          assignedDays.get(tempClients.get(i)).add(d);
+          ticketsAvailablePerDay[d]--;
+          
+          if (tempClients.get(i).getClientNumber() == clientId) {
+            mainClientBonus += agent.getClientPreference(tempClients.get(i).getClientNumber(), agent.E2);
+          }
+        }
+      }
+    }
+    
+    //ENTERTAINMENT TYPE THREE
+    Collections.sort(tempClients, new ClientEntertainmentThreeComparator());
+    //tickets available each day
+    ticketsAvailablePerDay = new int[4];
+    for (int i = 0; i < 4; i++) {
+      int auction = agent.getAuctionFor(agent.CAT_ENTERTAINMENT, agent.TYPE_MUSEUM, i);
+      ticketsAvailablePerDay[i] = agent.getOwn(auction);
+    }
+    //iterate through clients
+    for (int i = tempClients.size() - 1; i >= 0; i--) {
+      //initialise the client to next day map
+      Trip currentTrip = tempClients.get(i).getSelectedTrip();
+      
+      if (tempClients.get(i).getClientNumber() == clientId) {
+        currentTrip = trip;
+      }
+      
+      //for all days in the trip
+      for (int d = currentTrip.getInFlight() - 1; d < currentTrip.getOutFlight() - 1; d++) {
+        if (!assignedDays.get(tempClients.get(i)).contains((Integer) d) && ticketsAvailablePerDay[d] > 0) {
+          //updating used tickets
+          assignedDays.get(tempClients.get(i)).add(d);
+          ticketsAvailablePerDay[d]--;
+          
+          if (tempClients.get(i).getClientNumber() == clientId) {
+            mainClientBonus += agent.getClientPreference(tempClients.get(i).getClientNumber(), agent.E3);
+          }
+        }
+      }
+    }
+    
+    return mainClientBonus;
+  }
+  
   // New information about the quotes on all auctions for the auction
   // category has arrived (quotes for a specific type of auctions are
   // often requested at once).
@@ -219,6 +474,7 @@ private ArrayList<Client> clients;
 //    log.fine("All quotes for " + TACAgent.auctionCategoryToString(auctionCategory) + " has been updated");
 	  
 	  // We only initialise the allocation table after we get the first set of flight prices
+
 	  if(agent.getGameTime() > 15000 && isInitialised == false && auctionCategory == TACAgent.CAT_FLIGHT){
 		  isInitialised = true;
 		  calculateAllocation();
@@ -295,6 +551,10 @@ private ArrayList<Client> clients;
 
       // Assign the hotels to clients that want them
       assignCosts(auction, agent.getQuote(auction).getAskPrice(), agent.getOwn(auction));
+    //for entertainment
+    } else if (TACAgent.getAuctionCategory(auction) == TACAgent.CAT_ENTERTAINMENT) {
+      //update all entertainment bonuses
+      updateAllEntertainmentBonuses();
     }
     evaluateClientsFufillness();
     
@@ -317,6 +577,8 @@ private ArrayList<Client> clients;
 			  client.refreshSelectedTrip();
 		  }	  
 	  }
+    //update all entertainment bonuses
+    updateAllEntertainmentBonuses();
   }
   
   /**
@@ -382,21 +644,23 @@ private ArrayList<Client> clients;
   private void calculateAllocation() {
     // Loop through for each of the 8 clients
     for (int i = 0; i < 8; i++) {
-      // Add the client to the ArrayList. Allocations will be dealt with later
-      clients.add(new Client(i));
-    	
+      //work out simple entertainment bonus for initialisation
       int inFlight = agent.getClientPreference(i, TACAgent.ARRIVAL);
       int outFlight = agent.getClientPreference(i, TACAgent.DEPARTURE);
-      int auction;
-
-      // Allocate a different entertainment for each day the client stays
       int eType = -1;
-      while((eType = nextEntType(i, eType)) > 0) {
-        auction = bestEntDay(inFlight, outFlight, eType);
+      int eBonus = 0;
+      int currentDay = inFlight;
+      while((eType = nextEntType(i, eType)) > 0 && currentDay < outFlight) {
 //        log.finer("Adding entertainment " + eType + " on " + auction);
-        agent.setAllocation(auction, agent.getAllocation(auction) + 1);
+        eBonus += agent.getClientPreference(i, eType);
+        currentDay++;
       }
+      
+      // Add the client to the ArrayList. Allocations will be dealt with later
+      clients.add(new Client(i, eBonus));
+      
     }
+    updateAllEntertainmentBonuses();
   }
 
   private int bestEntDay(int inFlight, int outFlight, int type) {
@@ -448,12 +712,14 @@ private ArrayList<Client> clients;
     private Trip selectedTrip;
     private float[] assignedCosts; // Stores the price of all aucitons won for this client
     private boolean tripFufilled;
+    private int currentEntertainmentBonus;
     
-    public Client(int clientNumber) {
+    public Client(int clientNumber, int initialEntertainmentBonus) {
       // Initialise vars
       tripFufilled = false;
       possibleTrips = new ArrayList<Trip>();
       assignedCosts = new float[TACAgent.getAuctionNo()];
+      currentEntertainmentBonus = initialEntertainmentBonus;
 
       this.clientNumber = clientNumber;
       // Use client number to get and store preferences
@@ -572,9 +838,12 @@ private ArrayList<Client> clients;
      */
     private Trip getOptimalTrip() {
       Trip currentHighest = possibleTrips.get(0);
+      float currentHighestUtility = 0;
       for (Trip t : possibleTrips) {
-        if (t.getUtility() > currentHighest.getUtility()) {
+        float tempUtil = t.getUtility();
+        if (tempUtil > currentHighestUtility) {
           currentHighest = t;
+          currentHighestUtility = tempUtil;
         }
       }
       return currentHighest;
@@ -614,9 +883,51 @@ private ArrayList<Client> clients;
     public int getOutFlight() { return preferredOutFlight; }
     public int getHotelBonus() { return hotelBonus; }
     public float[] getAssignedCosts() { return assignedCosts; }
+    public Trip getSelectedTrip() { return selectedTrip; }
+    
+    //currentEntertainmentBonus methods
+    public int getCurrentEntertainmentBonus() { return currentEntertainmentBonus; }
+    public void setCurrentEntertainmentBonus(int bonus) { currentEntertainmentBonus = bonus; }
+    public void increaseCurrentEntertainmentBonus(int increase) { currentEntertainmentBonus += increase; }
 
   } // Client
-
+  
+  public class ClientEntertainmentOneComparator implements Comparator<Client> {
+    
+    @Override
+    public int compare(Client a, Client b) {
+      
+      return ((Integer) agent.getClientPreference(a.getClientNumber(), 
+        agent.E1)).compareTo(agent.getClientPreference(b.getClientNumber()
+        , agent.E1));
+      
+    }
+  } //ClientEntertainmentOneComparator
+  
+  public class ClientEntertainmentTwoComparator implements Comparator<Client> {
+    
+    @Override
+    public int compare(Client a, Client b) {
+      
+      return ((Integer) agent.getClientPreference(a.getClientNumber(), 
+        agent.E2)).compareTo(agent.getClientPreference(b.getClientNumber()
+        , agent.E2));
+      
+    }
+  } //ClientEntertainmentTwoComparator
+  
+  public class ClientEntertainmentThreeComparator implements Comparator<Client> {
+    
+    @Override
+    public int compare(Client a, Client b) {
+      
+      return ((Integer) agent.getClientPreference(a.getClientNumber(), 
+        agent.E3)).compareTo(agent.getClientPreference(b.getClientNumber()
+        , agent.E3));
+      
+    }
+  } //ClientEntertainmentThreeComparator
+  
   public class Trip {
 
     private Client client;
@@ -625,6 +936,7 @@ private ArrayList<Client> clients;
     private int hotelType;
     private ArrayList<Integer> auctions; // A list of the auctions used in this trip
     private float[] estimatedHotelPrices;
+    private boolean firstRun = true;
 
     public Trip(Client c, int inFlight, int outFlight, int hotelType) {
       auctions = new ArrayList<Integer>();
@@ -697,9 +1009,16 @@ private ArrayList<Client> clients;
       // TODO Entertainment utlity?
       // Ideally we'd have something about the entertainment here, but I have
       // no idea what to do with that. Maybe Ryan can add something?
+      int eBonus = 0;
+      if (firstRun) {
+        firstRun = false;
+        eBonus = this.client.getCurrentEntertainmentBonus();
+      } else {
+        eBonus = getOptimalEntertainmentBonusForTrip(this.client.getClientNumber(), this);
+      }
 
       // Calculate the overall utility of this trip
-      return 1000 - travelPenalty - flightCost - hotelCost + hotelBonus;
+      return 1000 - travelPenalty - flightCost - hotelCost + hotelBonus + eBonus;
     }
  
     // Method to return whether a hotel is used in this trip or not. Will be used
