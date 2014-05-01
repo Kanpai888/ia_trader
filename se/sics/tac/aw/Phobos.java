@@ -273,10 +273,7 @@ private ArrayList<Client> clients;
     currentFlightPrices = new float[TACAgent.getAuctionNo()]; // Reset flight prices array
     previousPrices = new float[TACAgent.getAuctionNo()]; // Reset the previous prices array
     
-    
-    
     clients = new ArrayList<Client>(); //
-    
   }
 
   // The current game has ended
@@ -295,7 +292,7 @@ private ArrayList<Client> clients;
       } else {
         cheapHotelEstimates[day] = 9999;
       }
-
+      // TODO remove
       // Assign the hotels to clients that want them
       int own = agent.getOwn(auction);
       if (own > 0) {
@@ -319,7 +316,6 @@ private ArrayList<Client> clients;
 			  client.assignAuctionCost(auction, cost);
 			  number--;
 		  }else if(client.resourceWanted(auction) && number == 0){
-			  // TODO Check this works
 			  // Could not win auction
 			  client.refreshSelectedTrip();
 		  }
@@ -665,17 +661,15 @@ private ArrayList<Client> clients;
       // use the price paid
       float flightCost = 0;
       int auction = TACAgent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, inFlight);
-      if (clientCosts[auction]  > 0) {
-      	flightCost += clientCosts[auction];
-      } else {
-      	flightCost += currentFlightPrices[auction];
+      if(agent.getAllocation(auction) <= agent.getOwn(auction)){
+    	  // Only apply inbound flight cost, if we need to buy a flight
+    	  flightCost += currentFlightPrices[auction];
       }
-
+      
       auction = TACAgent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
-      if (clientCosts[auction]  > 0) {
-        flightCost += clientCosts[auction];
-      } else {
-        flightCost += currentFlightPrices[auction];
+      if(agent.getAllocation(auction) <= agent.getOwn(auction)){
+    	  // Only apply outbound flight cost, if we need to buy a flight
+    	  flightCost += currentFlightPrices[auction];
       }
 
       // Add up the expected cost of these hotel rooms
