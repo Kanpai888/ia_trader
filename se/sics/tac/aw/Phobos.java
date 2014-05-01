@@ -221,15 +221,26 @@ public class Phobos extends AgentImpl {
 
   // The bid has been rejected (reason is bid.getRejectReason())
   public void bidRejected(Bid bid) {
-    log.warning("Bid Rejected: " + bid.getID());
-    log.warning("      Reason: " + bid.getRejectReason() + " (" + bid.getRejectReasonAsString() + ')');
+//    log.warning("Bid Rejected: " + bid.getID());
+//    log.warning("      Reason: " + bid.getRejectReason() + " (" + bid.getRejectReasonAsString() + ')');
+	  int auction = bid.getAuction();
+	  log.warning("-----------------------------------------------------");
+	  log.warning("Bid Rejected: " + bid.getID());
+      log.warning("      Reason: " + bid.getRejectReason() + " (" + bid.getRejectReasonAsString() + ')');
+      log.warning("        Type: " + TACAgent.auctionCategoryToString(TACAgent.getAuctionCategory(bid.getAuction()))  );
+      log.warning("Asking Price: " + agent.getQuote(auction).getAskPrice());
+      log.warning("   Bid Price: " + bid.getBidString());
+      log.warning(" Gd Estimate: " + expensiveHotelEstimates[TACAgent.getAuctionDay(auction) - 1]);
+      log.warning(" Bd Estimate: " + cheapHotelEstimates[TACAgent.getAuctionDay(auction) - 1]);
+  
   }
 
   // The bid contained errors (error represent error status - commandStatus)
   public void bidError(Bid bid, int status) {
 //    log.warning("Bid Error in auction " + bid.getAuction() + ": " + status + " (" + agent.commandStatusToString(status) + ')');
 	  int auction = bid.getAuction();
-      log.warning("Bid Rejected: " + bid.getID());
+	  log.warning("-----------------------------------------------------");
+      log.warning("   Bid Error: " + bid.getID());
       log.warning("      Reason: " + bid.getRejectReason() + " (" + bid.getRejectReasonAsString() + ')');
       log.warning("        Type: " + TACAgent.auctionCategoryToString(TACAgent.getAuctionCategory(bid.getAuction()))  );
       log.warning("Asking Price: " + agent.getQuote(auction).getAskPrice());
