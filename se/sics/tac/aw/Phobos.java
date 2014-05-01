@@ -145,7 +145,9 @@ public class Phobos extends AgentImpl {
   private float[] cheapHotelEstimates = new float[]{136,223,223,136};
   private float[] expensiveHotelEstimates = new float[]{180,280,280,180};
 
-  private ArrayList<Client> clients;
+  private boolean isInitialised = false;
+
+private ArrayList<Client> clients;
   
   protected void init(ArgEnumerator args) {
     prices = new float[TACAgent.getAuctionNo()];
@@ -215,6 +217,12 @@ public class Phobos extends AgentImpl {
   // often requested at once).
   public void quoteUpdated(int auctionCategory) {
 //    log.fine("All quotes for " + TACAgent.auctionCategoryToString(auctionCategory) + " has been updated");
+	  
+	  // We only initialise the allocation table after we get the first set of flight prices
+	  if(isInitialised == false && auctionCategory == TACAgent.CAT_FLIGHT){
+		  calculateAllocation();
+		  sendBids();
+	  }
   }
 
   // There are TACAgent have received an answer on a bid query/submission
@@ -262,8 +270,7 @@ public class Phobos extends AgentImpl {
     previousPrices = new float[TACAgent.getAuctionNo()]; // Reset the previous prices array
     
     clients = new ArrayList<Client>(); //
-    calculateAllocation();
-    sendBids();
+    
   }
 
   // The current game has ended
