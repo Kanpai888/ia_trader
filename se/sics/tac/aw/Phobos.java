@@ -266,7 +266,7 @@ public class Phobos extends AgentImpl {
         agent.submitBid(bid);
       }
     } else if (auctionCategory == TACAgent.CAT_ENTERTAINMENT) {
-      int alloc = agent.getAllocation(auction) - agent.getOwn(auction);
+      /*int alloc = agent.getAllocation(auction) - agent.getOwn(auction);
       if (alloc != 0) {
         Bid bid = new Bid(auction);
         if (alloc < 0) { // If we have more than we need
@@ -279,7 +279,31 @@ public class Phobos extends AgentImpl {
           // log.finest("submitting bid with alloc=" + agent.getAllocation(auction) + " own=" + agent.getOwn(auction));
         }
         agent.submitBid(bid);
+      }*/
+      
+      //entertainment bidding code
+      
+      //if(DEBUG) {
+        log.fine("quote updated with entertainment auction for day " + agent.getAuctionDay(auction) + " type " + agent.getAuctionType(auction));
+      //}
+      //get the maximum bonus for winning this auction
+      int max = 0;
+      for (Client c : clients) {
+        int temp = c.getBonusForEntertainment(auction);
+        if (temp > max) {
+          max = temp;
+        }
       }
+      
+      //submit bid of max - 50 if max > 50
+      if (max > 50) {
+        Bid bid = new Bid(auction);
+        bid.addBidPoint(1, max - 50f);
+      } else { //otherwise sell for 200
+        Bid bid = new Bid(auction);
+        bid.addBidPoint(1, 200f);
+      }
+      
     }
   }
 
@@ -333,11 +357,6 @@ public class Phobos extends AgentImpl {
 
     log.fine("Game Stopped!");
   }
-
- 
-
-
-  
 
   // The auction with id "auction" has closed
   public void auctionClosed(int auction) {
@@ -484,12 +503,15 @@ public class Phobos extends AgentImpl {
       }
 
       // Allocate a different entertainment for each day the client stays
-      int eType = -1;
+      /*int eType = -1;
       while((eType = nextEntType(i, eType)) > 0) {
         auction = bestEntDay(inFlight, outFlight, eType);
         log.finer("Adding entertainment " + eType + " on " + auction);
         agent.setAllocation(auction, agent.getAllocation(auction) + 1);
-      }
+      }*/
+      
+      
+      
     }
   }
 
@@ -645,7 +667,7 @@ public class Phobos extends AgentImpl {
     
     //allocate an entertainment id
     public void allocateEntertainment(int auction) {
-      allocatedEntertainmentIds.add(auction);
+      this.allocatedEntertainmentIds.add(auction);
     }
     
     //get the bonus for winning a specific entertainment auction
@@ -657,7 +679,7 @@ public class Phobos extends AgentImpl {
       }
       
       //compare previous allocation to new allocation
-      for (int i : allocatedEntertainmentIDs) {
+      for (Integer i : allocatedEntertainmentIds) {
       
         if (agent.getAuctionDay(i) == agent.getAuctionDay(auction)) {
           return 0; //allocation already exists on this day
