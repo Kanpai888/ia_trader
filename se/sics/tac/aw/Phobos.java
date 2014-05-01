@@ -188,7 +188,7 @@ private ArrayList<Client> clients;
       if(unwanted > 0){
     	  hotelBid.addBidPoint(unwanted, quote.getAskPrice() + 1);
       }
-      if(alloc + unwanted > 0){
+      if(alloc > 0 && !quote.isAuctionClosed()){
     	  // Only bid, if you have something to bid for
     	  agent.submitBid(hotelBid);
       }
@@ -498,11 +498,16 @@ private ArrayList<Client> clients;
      */
     public void evaluateFufillness(ArrayList<Integer> resources){
     	boolean fufilled = true;
+    	
+    	log.fine("----------------------");
+    	log.fine(resources.toString());
+    	log.fine("Check for: "+selectedTrip.getAuctions());
     	for(int wanted: selectedTrip.getAuctions()){
     		if(resources.contains(new Integer(wanted))){
     			resources.remove(new Integer(wanted));
     		}else{
     			fufilled = false;
+    			log.fine("Missing: "+wanted);
     		}
     	}
     	this.tripFufilled = fufilled;
