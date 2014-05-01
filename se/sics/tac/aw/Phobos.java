@@ -292,12 +292,9 @@ private ArrayList<Client> clients;
       } else {
         cheapHotelEstimates[day] = 9999;
       }
-      // TODO remove
+
       // Assign the hotels to clients that want them
-      int own = agent.getOwn(auction);
-      if (own > 0) {
-        assignCosts(auction, agent.getQuote(auction).getAskPrice(), own);
-      }
+      assignCosts(auction, agent.getQuote(auction).getAskPrice(), agent.getOwn(auction));
     }
     evaluateClientsFufillness();
     
@@ -318,8 +315,7 @@ private ArrayList<Client> clients;
 		  }else if(client.resourceWanted(auction) && number == 0){
 			  // Could not win auction
 			  client.refreshSelectedTrip();
-		  }
-		  
+		  }	  
 	  }
   }
   
