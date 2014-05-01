@@ -327,14 +327,18 @@ private ArrayList<Client> clients;
 	  // Create an arrayList of all resources we own,
 	  // e.g if we have 3 of auction num 8, then we put in the arrayList
 	  // {8,8,8}. This is used to substract from.
-	  for (int i = 0, n = TACAgent.getAuctionNo(); i < n; i++) {
-	      for(int num = agent.getOwn(i); num < agent.getOwn(i); num++){
+	  int n = TACAgent.getAuctionNo();
+//	  log.fine("+++Evaluate Client Fufillness+++");
+	  for (int i = 0 ; i < n; i++) {
+	      for(int num = 0; num < agent.getOwn(i); num++){
 	    	  allResources.add(i);
 	      }
 	  }
+//	  log.fine(allResources.toString());
 	  
 	  for(Client client:clients){
 		  client.evaluateFufillness(allResources);
+//		  log.fine(allResources.toString());
 	  }
   }
 
@@ -657,13 +661,13 @@ private ArrayList<Client> clients;
       // use the price paid
       float flightCost = 0;
       int auction = TACAgent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, inFlight);
-      if(agent.getAllocation(auction) >= agent.getOwn(auction)){
+      if(clientCosts[auction] == 0 && agent.getAllocation(auction) >= agent.getOwn(auction)){
     	  // Only apply inbound flight cost, if we need to buy a flight
     	  flightCost += currentFlightPrices[auction];
       }
       
       auction = TACAgent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
-      if(agent.getAllocation(auction) >= agent.getOwn(auction)){
+      if(clientCosts[auction] == 0 && agent.getAllocation(auction) >= agent.getOwn(auction)){
     	  // Only apply outbound flight cost, if we need to buy a flight
     	  flightCost += currentFlightPrices[auction];
       }
@@ -674,7 +678,7 @@ private ArrayList<Client> clients;
       for (int i = inFlight; i < outFlight; ++i) {
       	// Need to get auction number to check if client owns hotel
       	auction = TACAgent.getAuctionFor(TACAgent.CAT_HOTEL, hotelType, i);
-      	if(agent.getAllocation(auction) >= agent.getOwn(auction)){
+      	if(clientCosts[auction] == 0 && agent.getAllocation(auction) >= agent.getOwn(auction)){
       		// Only apply hotel cost, if we need to buy a hotel
       		hotelCost += estimatedHotelPrices[i - 1];
         }
