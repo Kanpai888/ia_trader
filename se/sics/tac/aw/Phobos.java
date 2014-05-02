@@ -143,6 +143,7 @@ public class Phobos extends AgentImpl {
   private float[] prices;
   private float[] previousPrices;
   private float[] currentFlightPrices;
+  private float[] auctionDelta;
   
   // Store hotel price estimates
   private float[] cheapHotelEstimates;
@@ -178,9 +179,25 @@ public class Phobos extends AgentImpl {
           assignCosts(auction, quote.getAskPrice(), flightsNeeded);
         }
     } else if (auctionCategory == TACAgent.CAT_HOTEL) {
+
+      if (auctionDelta[auction] < quote.getAskPrice() - previousPrices[auction]) {
+          auctionDelta[auction] = quote.getAskPrice() - previousPrices[auction];
+      }
       int alloc = agent.getAllocation(auction); // Allocation is number of items wanted from this auction
-      prices[auction] = quote.getAskPrice() + 50;
-      
+      prices[auction] = quote.getAskPrice() + auctionDelta[auction] + 1;
+
+      // Update the estimates that are used in getUtility()
+      float[] estimates;
+      if (agent.getAuctionType(auction) == TACAgent.TYPE_CHEAP_HOTEL) {
+        estimates = cheapHotelEstimates;
+      } else {
+        estimates = expensiveHotelEstimates;
+      }
+
+      if (!quote.isAuctionClosed()) {
+          estimates[agent.getAuctionDay(auction) - 1] = prices[auction];
+      }
+
       Bid hotelBid = new Bid(auction);
       if(alloc > 0){
     	  hotelBid.addBidPoint(alloc, prices[auction]);
@@ -524,10 +541,15 @@ public class Phobos extends AgentImpl {
   public void gameStarted() {
     log.fine("Game " + agent.getGameID() + " started!");
     isInitialised = false;
-    cheapHotelEstimates = new float[]{136,223,223,136};
-    expensiveHotelEstimates = new float[]{180,280,280,180};
+    cheapHotelEstimates = new float[]{0,0,0,0};
+    expensiveHotelEstimates = new float[]{0,0,0,0};
     currentFlightPrices = new float[TACAgent.getAuctionNo()]; // Reset flight prices array
     previousPrices = new float[TACAgent.getAuctionNo()]; // Reset the previous prices array
+    auctionDelta  = new float[TACAgent.getAuctionNo()]; // Reset the auction delta
+
+    for (int i = 0; i < auctionDelta.length; ++i) {
+      auctionDelta[i] = 50;
+    }
     
     clients = new ArrayList<Client>(); //
   }
@@ -551,10 +573,13 @@ public class Phobos extends AgentImpl {
 
       // Assign the hotels to clients that want them
       assignCosts(auction, agent.getQuote(auction).getAskPrice(), agent.getOwn(auction));
+      for (Client c : clients) {
+        c.refreshSelectedTrip();
+      }
     //for entertainment
     } else if (TACAgent.getAuctionCategory(auction) == TACAgent.CAT_ENTERTAINMENT) {
       //update all entertainment bonuses
-      updateAllEntertainmentBonuses();
+//      updateAllEntertainmentBonuses();
     }
     evaluateClientsFufillness();
     
@@ -575,10 +600,10 @@ public class Phobos extends AgentImpl {
 		  }else if(client.resourceWanted(auction) && number == 0){
 			  // Could not win auction
 			  client.refreshSelectedTrip();
-		  }	  
+		  }
 	  }
     //update all entertainment bonuses
-    updateAllEntertainmentBonuses();
+//    updateAllEntertainmentBonuses();
   }
   
   /**
@@ -635,6 +660,10 @@ public class Phobos extends AgentImpl {
           log.finest("submitting bid with alloc=" + agent.getAllocation(i) + " own=" + agent.getOwn(i));
         }
         agent.submitBid(bid);
+      } else if (agent.getAuctionCategory(i) == TACAgent.CAT_HOTEL) {
+        Bid b = new Bid(i);
+        b.addBidPoint(5, 1);
+        agent.submitBid(b);
       }
     }
   }
@@ -660,7 +689,7 @@ public class Phobos extends AgentImpl {
       clients.add(new Client(i, eBonus));
       
     }
-    updateAllEntertainmentBonuses();
+//    updateAllEntertainmentBonuses();
   }
 
   private int bestEntDay(int inFlight, int outFlight, int type) {
@@ -739,9 +768,14 @@ public class Phobos extends AgentImpl {
     public void refreshSelectedTrip(){
     	if(!tripFufilled){
 	    	clearAllocationTable();
+            Trip t = selectedTrip;
 	    	this.selectedTrip = getOptimalTrip();
 	    	updateAllocationTable();
-	    	log.fine("+++ Client "+clientNumber+" has switched trips");
+            if (t != selectedTrip) {
+              log.fine("+++ Client " + clientNumber + " has switched trips");
+              log.fine("Previous: " + t.getInFlight() + " to " + t.getOutFlight() + ", type " + t.getHotelType());
+              log.fine("     New: " + selectedTrip.getInFlight() + " to " + selectedTrip.getOutFlight() + ", type " + selectedTrip.getHotelType());
+            }
     	}
     }
     
@@ -1009,16 +1043,17 @@ public class Phobos extends AgentImpl {
       // TODO Entertainment utlity?
       // Ideally we'd have something about the entertainment here, but I have
       // no idea what to do with that. Maybe Ryan can add something?
-      int eBonus = 0;
-      if (firstRun) {
-        firstRun = false;
-        eBonus = this.client.getCurrentEntertainmentBonus();
-      } else {
-        eBonus = getOptimalEntertainmentBonusForTrip(this.client.getClientNumber(), this);
-      }
+//      int eBonus = 0;
+//      if (firstRun) {
+//        firstRun = false;
+//        eBonus = this.client.getCurrentEntertainmentBonus();
+//      } else {
+//        eBonus = getOptimalEntertainmentBonusForTrip(this.client.getClientNumber(), this);
+//      }
 
       // Calculate the overall utility of this trip
-      return 1000 - travelPenalty - flightCost - hotelCost + hotelBonus + eBonus;
+//      return 1000 - travelPenalty - flightCost - hotelCost + hotelBonus + eBonus;
+        return 1000 - travelPenalty - flightCost - hotelCost + hotelBonus;
     }
  
     // Method to return whether a hotel is used in this trip or not. Will be used
