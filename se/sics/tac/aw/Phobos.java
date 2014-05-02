@@ -275,7 +275,7 @@ public class Phobos extends AgentImpl {
           assignedDays.get(tempClients.get(i)).add(d);
           ticketsAvailablePerDay[d]--;
           //update allocation table
-          int auction = agent.getAuctionFor(agent.CAT_ENTERTAINMENT, agent.TYPE_ALLIGATOR_WRESTLING, i);
+          int auction = agent.getAuctionFor(agent.CAT_ENTERTAINMENT, agent.TYPE_ALLIGATOR_WRESTLING, d);
           int currentAlloc = agent.getAllocation(auction);
           agent.setAllocation(auction, currentAlloc + 1);
           //update client detail
@@ -306,7 +306,7 @@ public class Phobos extends AgentImpl {
           assignedDays.get(tempClients.get(i)).add(d);
           ticketsAvailablePerDay[d]--;
           //update allocation table
-          int auction = agent.getAuctionFor(agent.CAT_ENTERTAINMENT, agent.TYPE_AMUSEMENT, i);
+          int auction = agent.getAuctionFor(agent.CAT_ENTERTAINMENT, agent.TYPE_AMUSEMENT, d);
           int currentAlloc = agent.getAllocation(auction);
           agent.setAllocation(auction, currentAlloc + 1);
           //update client detail
@@ -337,7 +337,7 @@ public class Phobos extends AgentImpl {
           assignedDays.get(tempClients.get(i)).add(d);
           ticketsAvailablePerDay[d]--;
           //update allocation table
-          int auction = agent.getAuctionFor(agent.CAT_ENTERTAINMENT, agent.TYPE_MUSEUM, i);
+          int auction = agent.getAuctionFor(agent.CAT_ENTERTAINMENT, agent.TYPE_MUSEUM, d);
           int currentAlloc = agent.getAllocation(auction);
           agent.setAllocation(auction, currentAlloc + 1);
           //update client detail
