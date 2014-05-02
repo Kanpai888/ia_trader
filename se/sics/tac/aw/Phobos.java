@@ -251,6 +251,8 @@ public class Phobos extends AgentImpl {
     }
     previousPrices[auction] = quote.getAskPrice();
   }
+
+
   
   /**
    * Update all of the entertainment bonus values in the HashMap
@@ -775,10 +777,37 @@ public class Phobos extends AgentImpl {
               log.fine("+++ Client " + clientNumber + " has switched trips");
               log.fine("Previous: " + t.getInFlight() + " to " + t.getOutFlight() + ", type " + t.getHotelType());
               log.fine("     New: " + selectedTrip.getInFlight() + " to " + selectedTrip.getOutFlight() + ", type " + selectedTrip.getHotelType());
+              sendUpdatedBids();
             }
     	}
     }
-    
+
+    public void sendUpdatedBids() {
+        for (Integer auction : selectedTrip.getAuctions()) {
+          if (agent.getAuctionCategory(auction) == TACAgent.CAT_HOTEL){
+
+              int alloc = agent.getAllocation(auction); // Allocation is number of items wanted from this auction
+
+              Bid hotelBid = new Bid(auction);
+              if(alloc > 0){
+                  hotelBid.addBidPoint(alloc, prices[auction]);
+              }
+
+              // Compulsary bid at lowest value
+              Quote quote =  agent.getQuote(auction);
+              int unwanted = quote.getHQW() - alloc;
+              if(unwanted > 0){
+                  hotelBid.addBidPoint(unwanted, quote.getAskPrice() + 1);
+              }
+              if(alloc > 0 && !quote.isAuctionClosed()){
+                  // Only bid, if you have something to bid for
+                  agent.submitBid(hotelBid);
+              }
+
+          }
+      }
+    }
+
     /**
      * Used to check if a given resource is wanted by this client
      * @param auction
