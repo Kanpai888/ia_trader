@@ -665,6 +665,7 @@ public class Phobos extends AgentImpl {
 				if (alloc > 0) {
 					price = 200;
 					prices[i] = 200f;
+					previousPrices[i] = 200f;
 				}
 				break;
 			case TACAgent.CAT_ENTERTAINMENT:
@@ -1148,6 +1149,11 @@ public class Phobos extends AgentImpl {
 								hotelCost += expensiveHotelEstimates[TACAgent.getAuctionDay(existingAuction) - 1];
 							}else {
 								hotelCost += cheapHotelEstimates[TACAgent.getAuctionDay(existingAuction) - 1];
+							}
+						} else {
+							// If the auction is closed, then we add a fixed costs
+							if(!this.auctions.contains(existingAuction)){
+								hotelCost += 150;								
 							}
 						}
 					}
