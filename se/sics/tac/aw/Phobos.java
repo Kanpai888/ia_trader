@@ -179,40 +179,143 @@ public class Phobos extends AgentImpl {
 				// Remove the flights from monitoring and allocate them
 				assignAuctionItems(auction, flightsNeeded);
 			}
-		} else if (auctionCategory == TACAgent.CAT_ENTERTAINMENT) {
+		} else if (auctionCategory == TACAgent.CAT_ENTERTAINMENT && isInitialised) { //if type is entertainment and isInitialised is true
 			/*int alloc = agent.getAllocation(auction) - agent.getOwn(auction);
-      if (alloc != 0) {
-        Bid bid = new Bid(auction);
-        if (alloc < 0) { // If we have more than we need
-          prices[auction] = 200f - (agent.getGameTime() * 120f) / 720000; // Set a negative allocation - price is positive
-        } else { // Otherwise, create a bid
-          prices[auction] = 50f + (agent.getGameTime() * 100f) / 720000;
-        }
-        bid.addBidPoint(alloc, prices[auction]);
-        if (DEBUG) {
-          log.finest("submitting bid with alloc=" + agent.getAllocation(auction) + " own=" + agent.getOwn(auction));
-        }
-        agent.submitBid(bid);
-      }*/
-
+			  if (alloc != 0) {
+				Bid bid = new Bid(auction);
+				if (alloc < 0) { // If we have more than we need
+				  prices[auction] = 200f - (agent.getGameTime() * 120f) / 720000; // Set a negative allocation - price is positive
+				} else { // Otherwise, create a bid
+				  prices[auction] = 50f + (agent.getGameTime() * 100f) / 720000;
+				}
+				bid.addBidPoint(alloc, prices[auction]);
+				if (DEBUG) {
+				  log.finest("submitting bid with alloc=" + agent.getAllocation(auction) + " own=" + agent.getOwn(auction));
+				}
+				agent.submitBid(bid);
+			  }*/
+	  
 			int owned = agent.getOwn(auction); //number of tickets of this type owned
 			int alloc = agent.getAllocation(auction); //number of tickets of this type allocated
+			
+			log.fine("Entertainment " + auction + ": alloc = " + alloc + ", owned = " + owned);
+			
 			Bid bid = new Bid(auction);
 			//sell all unallocated tickets for 101
 			//since if agents spend over 100 on a ticket
 			//the bonus they get must be less than 100
 			//and the amount we gain is greater than 100
-			if (alloc < owned) {
-				bid.addBidPoint(alloc - owned, 101f);
+			if (alloc < owned || alloc == 4) { //also enter here if all possible tickets are owned and allocated (4)
+				
+				if(alloc < owned) { //only if fewer tickets are allocated than owned
+					bid.addBidPoint(alloc - owned, 101f);
+				}
+				
+				//for all allocated tickets sell at 200
+				for (int ticketNo = 0; ticketNo < alloc; ticketNo++) {
+					
+					bid.addBidPoint(-1, 200f);
+					
+				}
+			} else { //buy tickets here
+				int auctionType = agent.getAuctionType(auction);
+				int clientPref = 0;
+				
+				ArrayList<Client> tempClients = new ArrayList<Client>(clients);
+				
+				//get client preference type from auction type
+				switch (auctionType) {
+					case 1 : //agent.TYPE_ALLIGATOR_WRESTLING
+						clientPref = agent.E1;
+						Collections.sort(tempClients, new ClientEntertainmentOneComparator());
+						break;
+						
+					case 2 : //agent.TYPE_AMUSEMENT
+						clientPref = agent.E2;
+						Collections.sort(tempClients, new ClientEntertainmentTwoComparator());
+						break;
+					
+					case 3 : //agent.TYPE_MUSEUM
+						clientPref = agent.E3;
+						Collections.sort(tempClients, new ClientEntertainmentThreeComparator());
+						break;
+						
+					default :
+						log.warning("Invalid auction type for entertainment: " + auctionType);
+						break;
+				}
+				
+				int toBuy = 4 - owned; //4 possible tickets
+				int currentClient = 7;
+				
+				//set other e types 
+				int other1, other2;
+				if (clientPref == agent.E1) {
+					other1 = agent.E2;
+					other2 = agent.E3;
+				} else if (clientPref == agent.E2) {
+					other1 = agent.E1;
+					other2 = agent.E3;
+				} else {
+					other1 = agent.E1;
+					other2 = agent.E2;
+				}
+				
+				
+				while (toBuy > 0 && currentClient >= 0) {
+					//loop through until reaching unallocated
+					if (alloc > 0) {
+						alloc--;
+						currentClient--;
+					} else {
+					
+						//get length of stay
+						int duration = tempClients.get(currentClient).getSelectedTrip().getOutFlight() - tempClients.get(currentClient).getSelectedTrip().getInFlight();
+						
+						if (agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), clientPref) >= agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), other1)
+								&& agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), clientPref) >= agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), other2)
+								&& duration <= 1) {
+							
+							if (agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), clientPref) < 100) {
+								float bonus = agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), clientPref);
+								if (bonus > 7) {
+									bonus -= 7;
+								}
+								
+								bid.addBidPoint(1, bonus);
+								toBuy--;
+							}
+							
+							
+						} else if (duration == 2
+								&& (agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), clientPref) >= agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), other1)
+								|| agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), clientPref) >= agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), other2))) {
+							
+							if (agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), clientPref) < 100) {
+								float bonus = agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), clientPref);
+								if (bonus > 7) {
+									bonus -= 7;
+								}
+								
+								bid.addBidPoint(1, bonus);
+								toBuy--;
+							}
+						} else if (duration >= 3) {
+							if (agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), clientPref) < 100) {
+								float bonus = agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), clientPref);
+								if (bonus > 7) {
+									bonus -= 7;
+								}
+								
+								bid.addBidPoint(1, bonus);
+								toBuy--;
+							}
+						}
+						currentClient--;
+					}
+				}
 			}
-
-			//for all allocated tickets
-			for (int ticketNo = 0; ticketNo < alloc; ticketNo++) {
-
-
-
-			}
-
+			
 			agent.submitBid(bid);
 		}
 		previousPrices[auction] = quote.getAskPrice();
@@ -376,7 +479,7 @@ public class Phobos extends AgentImpl {
 			//for entertainment
 		} else if (TACAgent.getAuctionCategory(auction) == TACAgent.CAT_ENTERTAINMENT) {
 			//update all entertainment bonuses
-			//      updateAllEntertainmentBonuses();
+			updateAllEntertainmentBonuses();
 		}
 		evaluateClientsFufillness();
 
@@ -429,6 +532,7 @@ public class Phobos extends AgentImpl {
 					//update client detail
 					int bonus = agent.getClientPreference(tempClients.get(i).getClientNumber(), TACAgent.E1);
 					clients.get(tempClients.get(i).getClientNumber()).increaseCurrentEntertainmentBonus(bonus);
+					
 				}
 			}
 		}
@@ -615,6 +719,7 @@ public class Phobos extends AgentImpl {
 		return mainClientBonus;
 	}
 
+	
 	/**
 	 * Assigns auction costs to clients. Can cause clients to change trips 
 	 * @param auction
@@ -629,7 +734,7 @@ public class Phobos extends AgentImpl {
 			}
 		}
 		//update all entertainment bonuses
-		//    updateAllEntertainmentBonuses();
+		updateAllEntertainmentBonuses();
 	}
 
 	/**
@@ -717,7 +822,7 @@ public class Phobos extends AgentImpl {
 			clients.add(new Client(i, eBonus));
 
 		}
-		//    updateAllEntertainmentBonuses();
+		updateAllEntertainmentBonuses();
 	}
 
 	private int bestEntDay(int inFlight, int outFlight, int type) {
@@ -1168,17 +1273,17 @@ public class Phobos extends AgentImpl {
 			// TODO Entertainment utlity?
 			// Ideally we'd have something about the entertainment here, but I have
 			// no idea what to do with that. Maybe Ryan can add something?
-			//      int eBonus = 0;
+			int eBonus = 0;
 			if (firstRun) {
 				firstRun = false;
-				//        eBonus = this.client.getCurrentEntertainmentBonus();
-				//      } else {
-				//        eBonus = getOptimalEntertainmentBonusForTrip(this.client.getClientNumber(), this);
+			    eBonus = this.client.getCurrentEntertainmentBonus();
+			} else {
+			    eBonus = getOptimalEntertainmentBonusForTrip(this.client.getClientNumber(), this);
 			}
 
 			// Calculate the overall utility of this trip
-			//      return 1000 - travelPenalty - flightCost - hotelCost + hotelBonus + eBonus;
-			return 1000 - travelPenalty - flightCost - hotelCost + hotelBonus;
+			return 1000 - travelPenalty - flightCost - hotelCost + hotelBonus + eBonus;
+			//return 1000 - travelPenalty - flightCost - hotelCost + hotelBonus;
 		}
 
 		// Method to return whether a hotel is used in this trip or not. Will be used
