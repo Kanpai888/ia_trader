@@ -1135,7 +1135,7 @@ public class Phobos extends AgentImpl {
 			for (int i = inFlight; i < outFlight; ++i) {
 				// Need to get auction number to check if client owns hotel
 				auction = TACAgent.getAuctionFor(TACAgent.CAT_HOTEL, hotelType, i);
-				if( !assignedItems.contains(auction) && agent.getAllocation(auction) >= agent.getOwn(auction)){
+				if( !assignedItems.contains(auction) && agent.getAllocation(auction) + 1 >= agent.getOwn(auction)){
 					// Only apply hotel cost, if we need to buy a hotel
 					hotelCost += estimatedHotelPrices[i - 1];
 				}
