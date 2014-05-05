@@ -222,108 +222,19 @@ public class Phobos extends AgentImpl {
 					
 				}
 			} else { //buy tickets here
-				int auctionType = agent.getAuctionType(auction);
-				int clientPref = 0;
 				
-				ArrayList<Client> tempClients = new ArrayList<Client>(clients);
+				int type, day;
+				type = agent.getAuctionType(auction);
+				day = agent.getAuctionDay(auction);
 				
-				//get client preference type from auction type
-				switch (auctionType) {
-					case 1 : //agent.TYPE_ALLIGATOR_WRESTLING
-						clientPref = agent.E1;
-						Collections.sort(tempClients, new ClientEntertainmentOneComparator());
-						break;
-						
-					case 2 : //agent.TYPE_AMUSEMENT
-						clientPref = agent.E2;
-						Collections.sort(tempClients, new ClientEntertainmentTwoComparator());
-						break;
+				float bonus = getAdditionalBonusForGivenTicket(new ETicket(type, day));
+				
+				if (bonus > 20) {
 					
-					case 3 : //agent.TYPE_MUSEUM
-						clientPref = agent.E3;
-						Collections.sort(tempClients, new ClientEntertainmentThreeComparator());
-						break;
-						
-					default :
-						log.warning("Invalid auction type for entertainment: " + auctionType);
-						break;
-				}
-				
-				int toBuy = 4 - owned; //4 possible tickets
-				int currentClient = 7;
-				
-				//set other e types 
-				int other1, other2;
-				if (clientPref == agent.E1) {
-					other1 = agent.E2;
-					other2 = agent.E3;
-				} else if (clientPref == agent.E2) {
-					other1 = agent.E1;
-					other2 = agent.E3;
-				} else {
-					other1 = agent.E1;
-					other2 = agent.E2;
-				}
-				
-				
-				while (toBuy > 0 && currentClient >= 0) {
-					//loop through until reaching unallocated
-					if (alloc > 0) {
-						alloc--;
-						currentClient--;
-						log.fine("Entertainment: already allocated");
-					} else if (tempClients.get(currentClient).getSelectedTrip().getInFlight() > agent.getAuctionDay(auction)
-							|| tempClients.get(currentClient).getSelectedTrip().getOutFlight() <= agent.getAuctionDay(auction)){
-						
-						currentClient--;
-						log.fine("Entertainment: outside of desired days");
-					} else {
-						log.fine("Entertainment: attempting to assemble bid");
-						//get length of stay
-						int duration = tempClients.get(currentClient).getSelectedTrip().getOutFlight() - tempClients.get(currentClient).getSelectedTrip().getInFlight();
-						
-						if (agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), clientPref) >= agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), other1)
-								&& agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), clientPref) >= agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), other2)
-								&& duration <= 1) {
-							
-							if (agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), clientPref) < 100) {
-								float bonus = agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), clientPref);
-								if (bonus > 15) {
-									bonus -= bonus -= random.nextInt(14) - 1;
-									log.fine("+++Creating bid");
-									bid.addBidPoint(1, bonus);
-								}
-								toBuy--;
-							}
-							
-							
-						} else if (duration == 2
-								&& (agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), clientPref) >= agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), other1)
-								|| agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), clientPref) >= agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), other2))) {
-							
-							if (agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), clientPref) < 100) {
-								float bonus = agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), clientPref);
-								if (bonus > 15) {
-									bonus -= random.nextInt(14) - 1;
-									log.fine("+++Creating bid");
-									bid.addBidPoint(1, bonus);
-								}
-								
-								toBuy--;
-							}
-						} else if (duration >= 3) {
-							if (agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), clientPref) < 100) {
-								float bonus = agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), clientPref);
-								if (bonus > 15) {
-									bonus -= random.nextInt(14) - 1;
-									log.fine("+++Creating bid");
-									bid.addBidPoint(1, bonus);
-								}
-								toBuy--;
-							}
-						}
-						currentClient--;
-					}
+					bonus -= random.nextInt(19);
+					bonus--;
+					
+					bid.addBidPoint(1, bonus);
 				}
 			}
 			
