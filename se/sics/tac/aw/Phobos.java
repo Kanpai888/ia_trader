@@ -267,6 +267,8 @@ public class Phobos extends AgentImpl {
 					if (alloc > 0) {
 						alloc--;
 						currentClient--;
+					} else if (tempClients.get(currentClient).getSelectedTrip().getInFlight() < agent.getAuctionDay(auction) || tempClients.get(currentClient).getSelectedTrip().getOutFlight() >= agent.getAuctionDay(auction)){
+						currentClient--;
 					} else {
 					
 						//get length of stay
@@ -1282,8 +1284,8 @@ public class Phobos extends AgentImpl {
 			}
 
 			// Calculate the overall utility of this trip
-			return 1000 - travelPenalty - flightCost - hotelCost + hotelBonus + eBonus;
-			//return 1000 - travelPenalty - flightCost - hotelCost + hotelBonus;
+			//return 1000 - travelPenalty - flightCost - hotelCost + hotelBonus + eBonus;
+			return 1000 - travelPenalty - flightCost - hotelCost + hotelBonus;
 		}
 
 		// Method to return whether a hotel is used in this trip or not. Will be used
