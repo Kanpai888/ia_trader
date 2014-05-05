@@ -133,9 +133,13 @@ import java.util.ListIterator;
 import java.util.logging.*;
 import java.util.Comparator;
 import java.util.Collections;
+import java.util.Random;
 
 public class Phobos extends AgentImpl {
-
+	
+	//random number generator
+	private Random random = new Random();
+	
 	private static final Logger log =
 			Logger.getLogger(Phobos.class.getName());
 
@@ -284,11 +288,11 @@ public class Phobos extends AgentImpl {
 							
 							if (agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), clientPref) < 100) {
 								float bonus = agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), clientPref);
-								if (bonus > 7) {
-									bonus -= 7;
+								if (bonus > 15) {
+									bonus -= bonus -= random.nextInt(14) - 1;
+									log.fine("+++Creating bid");
+									bid.addBidPoint(1, bonus);
 								}
-								log.fine("+++Creating bid");
-								bid.addBidPoint(1, bonus);
 								toBuy--;
 							}
 							
@@ -299,21 +303,22 @@ public class Phobos extends AgentImpl {
 							
 							if (agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), clientPref) < 100) {
 								float bonus = agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), clientPref);
-								if (bonus > 7) {
-									bonus -= 7;
+								if (bonus > 15) {
+									bonus -= random.nextInt(14) - 1;
+									log.fine("+++Creating bid");
+									bid.addBidPoint(1, bonus);
 								}
-								log.fine("+++Creating bid");
-								bid.addBidPoint(1, bonus);
+								
 								toBuy--;
 							}
 						} else if (duration >= 3) {
 							if (agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), clientPref) < 100) {
 								float bonus = agent.getClientPreference(tempClients.get(currentClient).getClientNumber(), clientPref);
-								if (bonus > 7) {
-									bonus -= 7;
+								if (bonus > 15) {
+									bonus -= random.nextInt(14) - 1;
+									log.fine("+++Creating bid");
+									bid.addBidPoint(1, bonus);
 								}
-								log.fine("+++Creating bid");
-								bid.addBidPoint(1, bonus);
 								toBuy--;
 							}
 						}
@@ -496,114 +501,7 @@ public class Phobos extends AgentImpl {
 	 * Update all of the entertainment bonus values in the HashMap
 	 */
 	private void updateAllEntertainmentBonuses() {
-		//set entertainment bonuses to 0
-		for (Client c : clients) {
-			c.setCurrentEntertainmentBonus(0);
-		}
-
-		//hold temp list of clients
-		ArrayList<Client> tempClients = new ArrayList<Client>(clients);
-
-		//Clients to a list of days which have been assigned
-		HashMap<Client, ArrayList<Integer>> assignedDays = new HashMap<Client, ArrayList<Integer>>(8);
-
-		for (int i = 0; i < 8; i++) {
-			assignedDays.put(tempClients.get(i), new ArrayList<Integer>());
-		}
-
-		//ENTERTAINMENT TYPE ONE
-		Collections.sort(tempClients, new ClientEntertainmentOneComparator());
-		//tickets available each day
-		int[] ticketsAvailablePerDay = new int[4];
-		for (int i = 0; i < 4; i++) {
-			int auction = TACAgent.getAuctionFor(TACAgent.CAT_ENTERTAINMENT, TACAgent.TYPE_ALLIGATOR_WRESTLING, i);
-			ticketsAvailablePerDay[i] = agent.getOwn(auction);
-			//remove all allocations from the allocation table
-			agent.setAllocation(auction, 0);
-		}
-		//iterate through clients
-		for (int i = tempClients.size() - 1; i >= 0; i--) {
-			//initialise the client to next day map
-			Trip currentTrip = tempClients.get(i).getSelectedTrip();
-			//for all days in the trip
-			for (int d = currentTrip.getInFlight() - 1; d < currentTrip.getOutFlight() - 1; d++) {
-				if (!assignedDays.get(tempClients.get(i)).contains((Integer) d) && ticketsAvailablePerDay[d] > 0) {
-					//updating used tickets
-					assignedDays.get(tempClients.get(i)).add(d);
-					ticketsAvailablePerDay[d]--;
-					//update allocation table
-					int auction = TACAgent.getAuctionFor(TACAgent.CAT_ENTERTAINMENT, TACAgent.TYPE_ALLIGATOR_WRESTLING, d);
-					int currentAlloc = agent.getAllocation(auction);
-					agent.setAllocation(auction, currentAlloc + 1);
-					//update client detail
-					int bonus = agent.getClientPreference(tempClients.get(i).getClientNumber(), TACAgent.E1);
-					clients.get(tempClients.get(i).getClientNumber()).increaseCurrentEntertainmentBonus(bonus);
-					
-				}
-			}
-		}
-
-		//ENTERTAINMENT TYPE TWO
-		Collections.sort(tempClients, new ClientEntertainmentTwoComparator());
-		//tickets available each day
-		ticketsAvailablePerDay = new int[4];
-		for (int i = 0; i < 4; i++) {
-			int auction = TACAgent.getAuctionFor(TACAgent.CAT_ENTERTAINMENT, TACAgent.TYPE_AMUSEMENT, i);
-			ticketsAvailablePerDay[i] = agent.getOwn(auction);
-			//remove all allocations from the allocation table
-			agent.setAllocation(auction, 0);
-		}
-		//iterate through clients
-		for (int i = tempClients.size() - 1; i >= 0; i--) {
-			//initialise the client to next day map
-			Trip currentTrip = tempClients.get(i).getSelectedTrip();
-			//for all days in the trip
-			for (int d = currentTrip.getInFlight() - 1; d < currentTrip.getOutFlight() - 1; d++) {
-				if (!assignedDays.get(tempClients.get(i)).contains((Integer) d) && ticketsAvailablePerDay[d] > 0) {
-					//updating used tickets
-					assignedDays.get(tempClients.get(i)).add(d);
-					ticketsAvailablePerDay[d]--;
-					//update allocation table
-					int auction = TACAgent.getAuctionFor(TACAgent.CAT_ENTERTAINMENT, TACAgent.TYPE_AMUSEMENT, d);
-					int currentAlloc = agent.getAllocation(auction);
-					agent.setAllocation(auction, currentAlloc + 1);
-					//update client detail
-					int bonus = agent.getClientPreference(tempClients.get(i).getClientNumber(), TACAgent.E2);
-					clients.get(tempClients.get(i).getClientNumber()).increaseCurrentEntertainmentBonus(bonus);
-				}
-			}
-		}
-
-		//ENTERTAINMENT TYPE THREE
-		Collections.sort(tempClients, new ClientEntertainmentThreeComparator());
-		//tickets available each day
-		ticketsAvailablePerDay = new int[4];
-		for (int i = 0; i < 4; i++) {
-			int auction = TACAgent.getAuctionFor(TACAgent.CAT_ENTERTAINMENT, TACAgent.TYPE_MUSEUM, i);
-			ticketsAvailablePerDay[i] = agent.getOwn(auction);
-			//remove all allocations from the allocation table
-			agent.setAllocation(auction, 0);
-		}
-		//iterate through clients
-		for (int i = tempClients.size() - 1; i >= 0; i--) {
-			//initialise the client to next day map
-			Trip currentTrip = tempClients.get(i).getSelectedTrip();
-			//for all days in the trip
-			for (int d = currentTrip.getInFlight() - 1; d < currentTrip.getOutFlight() - 1; d++) {
-				if (!assignedDays.get(tempClients.get(i)).contains((Integer) d) && ticketsAvailablePerDay[d] > 0) {
-					//updating used tickets
-					assignedDays.get(tempClients.get(i)).add(d);
-					ticketsAvailablePerDay[d]--;
-					//update allocation table
-					int auction = TACAgent.getAuctionFor(TACAgent.CAT_ENTERTAINMENT, TACAgent.TYPE_MUSEUM, d);
-					int currentAlloc = agent.getAllocation(auction);
-					agent.setAllocation(auction, currentAlloc + 1);
-					//update client detail
-					int bonus = agent.getClientPreference(tempClients.get(i).getClientNumber(), TACAgent.E3);
-					clients.get(tempClients.get(i).getClientNumber()).increaseCurrentEntertainmentBonus(bonus);
-				}
-			}
-		}
+		
 	}
 
 	/**
@@ -1314,5 +1212,37 @@ public class Phobos extends AgentImpl {
 		}
 
 	} // Trip
+	
+	public class ETicket {
+		
+		private int type;
+		private int day;
+		
+		public ETicket(int eType, int eDay) {
+			this.type = eType;
+			this.day = eDay;
+		}
+		
+		public int getType() { return type; }
+		public int getDay() { return day; }
+		
+		public int getClientPreferenceType() {
+			
+			switch (type) {
+				
+				case TACAgent.TYPE_ALLIGATOR_WRESTLING:
+					return TACAgent.E1;
+				
+				case TACAgent.TYPE_AMUSEMENT:
+					return TACAgent.E2;
+					
+				case TACAgent.TYPE_MUSEUM:
+					return TACAgent.E3;
+					
+				default:
+					return -1;
+			}
+		} //ETicket
+	}
 
 } // DummyAgent
