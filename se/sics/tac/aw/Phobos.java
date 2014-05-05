@@ -779,6 +779,9 @@ public class Phobos extends AgentImpl {
 		private boolean tripFufilled;
 		private int currentEntertainmentBonus;
 		private ArrayList<Integer> assignedItems;
+		
+		//Assigned entertainment tickets
+		private ETicket[] etickets;
 
 		public Client(int clientNumber, int initialEntertainmentBonus) {
 			// Initialise vars
@@ -1002,13 +1005,24 @@ public class Phobos extends AgentImpl {
 			}
 			return currentHighest;
 		}
-
+		
+		//set the etickets array to be of the required size
+		public void updateETicketArrayLength() {
+			etickets = new ETicket[selectedTrip.getOutFlight() - selectedTrip.getInFlight()];
+		}
+		
+		//set a specific slot to a specific ticket
+		public void setETicketInArray(ETicket ticket, int slot) {
+			etickets[slot] = ticket;
+		}
+		
 		public int getClientNumber() { return clientNumber; }
 		public int getInFlight() { return preferredInFlight; }
 		public int getOutFlight() { return preferredOutFlight; }
 		public int getHotelBonus() { return hotelBonus; }
 		public ArrayList<Integer> getAssignedItems() { return assignedItems; }
 		public Trip getSelectedTrip() { return selectedTrip; }
+		public ETicket[] getETicketList() { return etickets; }
 
 		//currentEntertainmentBonus methods
 		public int getCurrentEntertainmentBonus() { return currentEntertainmentBonus; }
