@@ -213,8 +213,13 @@ public class Phobos extends AgentImpl {
 			if (alloc < owned || alloc == 4) { //also enter here if all possible tickets are owned and allocated (4)
 				
 				if(alloc < owned) { //only if fewer tickets are allocated than owned
-					bid.addBidPoint(alloc - owned, 101f);
-				}
+					
+					if (agent.getAuctionDay(auction) == 1) {
+						bid.addBidPoint(alloc - owned, 95f); //sell first day auction for lower price
+					} else {
+						bid.addBidPoint(alloc - owned, 101f);
+					}
+				} 
 				
 				//for all allocated tickets sell at 200
 				for (int ticketNo = 0; ticketNo < alloc; ticketNo++) {
@@ -232,8 +237,8 @@ public class Phobos extends AgentImpl {
 				//get the bonus for getting an extra ticket
 				float bonus = getAdditionalBonusForGivenTicket(new ETicket(type, day));
 				
-				//limit bonus to 120
-				if (bonus > 100) { bonus = 120; }
+				//limit bonus to 103
+				if (bonus > 103) { bonus = 103; }
 				
 				if (bonus > 50) {
 					//set the price to bid to a random number between bonus-50 and bonus-10
