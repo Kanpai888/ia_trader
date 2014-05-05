@@ -700,6 +700,7 @@ public class Phobos extends AgentImpl {
 	// An allocation is a item that we need to provide to the client.
 	private void calculateAllocation() {
 		// Loop through for each of the 8 clients
+		log.fine("Initial Allocations");
 		for (int i = 0; i < 8; i++) {
 			//work out simple entertainment bonus for initialisation
 			int inFlight = agent.getClientPreference(i, TACAgent.ARRIVAL);
@@ -715,7 +716,11 @@ public class Phobos extends AgentImpl {
 
 			// Add the client to the ArrayList. Allocations will be dealt with later
 			clients.add(new Client(i, eBonus));
-
+			int in = clients.get(i).getInFlight();
+			int out = clients.get(i).getOutFlight();
+			int hotel = clients.get(i).getSelectedTrip().getHotelType();
+			
+			log.fine("Client " + i +" , in-"+in +" , out-"+out+" hotel-" +hotel );
 		}
 		//    updateAllEntertainmentBonuses();
 	}
@@ -816,6 +821,7 @@ public class Phobos extends AgentImpl {
 					}
 				}
 				updateAllocationTable();
+				evaluateClientsFufillness();
 
 				if (t != selectedTrip) {
 					log.fine("+++ Client " + clientNumber + " has switched trips");
@@ -860,7 +866,8 @@ public class Phobos extends AgentImpl {
 		 * @return
 		 */
 		public boolean resourceWanted(int auction){
-			if(!tripFufilled && selectedTrip.getAuctions().contains(auction)){
+			if(!tripFufilled && selectedTrip.getAuctions().contains(auction)
+					&& !assignedItems.contains(auction)){
 				return true;
 			}
 			return false;
