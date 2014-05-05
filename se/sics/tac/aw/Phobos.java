@@ -134,6 +134,7 @@ import java.util.logging.*;
 import java.util.Comparator;
 import java.util.Collections;
 import java.util.Random;
+import java.util.Arrays;
 
 public class Phobos extends AgentImpl {
 	
@@ -471,6 +472,7 @@ public class Phobos extends AgentImpl {
 							clients.get(currentClientObject.getClientNumber()).setETicketInArray(tempTicket, i);
 							tempTicket = null;
 							isAssigned = true;
+							break;
 						} else if (currentClientObject.getETicketList()[i].getClientBonus(currentClientObject) < tempTicket.getClientBonus(currentClientObject)) {
 							ETicket temp2 = currentClientObject.getETicketList()[i];
 							clients.get(currentClientObject.getClientNumber()).setETicketInArray(tempTicket, i);
@@ -537,6 +539,7 @@ public class Phobos extends AgentImpl {
 						bonusDifference += tempTicket.getClientBonus(currentClientObject);
 						tempTicket = null;
 						isAssigned = true;
+						break;
 					} else if (currentClientObject.getETicketList()[i].getClientBonus(currentClientObject) < tempTicket.getClientBonus(currentClientObject)) {
 						bonusDifference += tempTicket.getClientBonus(currentClientObject);
 						ETicket temp2 = currentClientObject.getETicketList()[i];
@@ -1132,10 +1135,28 @@ public class Phobos extends AgentImpl {
 			} else {
 			    //eBonus = getOptimalEntertainmentBonusForTrip(this.client.getClientNumber(), this);
 			}*/
-
+			
+			int clientNum = client.getClientNumber();
+			int[] preferences = new int[3];
+			
+			int maxIt = outFlight - inFlight;
+			if (maxIt > 3) { maxIt = 3; }
+			
+			preferences[0] = agent.getClientPreference(clientNum, agent.E1);
+			preferences[1] = agent.getClientPreference(clientNum, agent.E2);
+			preferences[2] = agent.getClientPreference(clientNum, agent.E3);
+			
+			Arrays.sort(preferences);
+			int eBonus = 0;
+			for (int i = maxIt - 1; i >= 0; i--) {
+				eBonus += preferences[i];
+			}
+			
+			eBonus /= 2;
+			
 			// Calculate the overall utility of this trip
-			//return 1000 - travelPenalty - flightCost - hotelCost + hotelBonus + eBonus;
-			return 1000 - travelPenalty - flightCost - hotelCost + hotelBonus;
+			return 1000 - travelPenalty - flightCost - hotelCost + hotelBonus + eBonus;
+			//return 1000 - travelPenalty - flightCost - hotelCost + hotelBonus;
 		}
 
 		// Method to return whether a hotel is used in this trip or not. Will be used
