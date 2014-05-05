@@ -267,10 +267,14 @@ public class Phobos extends AgentImpl {
 					if (alloc > 0) {
 						alloc--;
 						currentClient--;
-					} else if (tempClients.get(currentClient).getSelectedTrip().getInFlight() < agent.getAuctionDay(auction) || tempClients.get(currentClient).getSelectedTrip().getOutFlight() >= agent.getAuctionDay(auction)){
+						log.fine("Entertainment: already allocated");
+					} else if (tempClients.get(currentClient).getSelectedTrip().getInFlight() > agent.getAuctionDay(auction)
+							|| tempClients.get(currentClient).getSelectedTrip().getOutFlight() <= agent.getAuctionDay(auction)){
+						
 						currentClient--;
+						log.fine("Entertainment: outside of desired days");
 					} else {
-					
+						log.fine("Entertainment: attempting to assemble bid");
 						//get length of stay
 						int duration = tempClients.get(currentClient).getSelectedTrip().getOutFlight() - tempClients.get(currentClient).getSelectedTrip().getInFlight();
 						
@@ -283,7 +287,7 @@ public class Phobos extends AgentImpl {
 								if (bonus > 7) {
 									bonus -= 7;
 								}
-								
+								log.fine("+++Creating bid");
 								bid.addBidPoint(1, bonus);
 								toBuy--;
 							}
@@ -298,7 +302,7 @@ public class Phobos extends AgentImpl {
 								if (bonus > 7) {
 									bonus -= 7;
 								}
-								
+								log.fine("+++Creating bid");
 								bid.addBidPoint(1, bonus);
 								toBuy--;
 							}
@@ -308,7 +312,7 @@ public class Phobos extends AgentImpl {
 								if (bonus > 7) {
 									bonus -= 7;
 								}
-								
+								log.fine("+++Creating bid");
 								bid.addBidPoint(1, bonus);
 								toBuy--;
 							}
