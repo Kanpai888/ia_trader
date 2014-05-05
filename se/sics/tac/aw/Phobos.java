@@ -224,18 +224,30 @@ public class Phobos extends AgentImpl {
 				}
 			} else { //buy tickets here
 				
+				//get the dat and type of the auction
 				int type, day;
 				type = agent.getAuctionType(auction);
 				day = agent.getAuctionDay(auction);
 				
+				//get the bonus for getting an extra ticket
 				float bonus = getAdditionalBonusForGivenTicket(new ETicket(type, day));
 				
-				if (bonus > 20) {
-					
-					bonus -= random.nextInt(19);
-					bonus--;
-					
-					bid.addBidPoint(1, bonus);
+				//limit bonus to 120
+				if (bonus > 100) { bonus = 120; }
+				
+				if (bonus > 50) {
+					//set the price to bid to a random number between bonus-50 and bonus-10
+					float priceToPay = bonus - 50;
+					priceToPay += random.nextInt(40);
+					bid.addBidPoint(1, priceToPay);
+				} else if (bonus > 20) {
+					//set the price between bonus-20 and bonus-2
+					float priceToPay = bonus - 20;
+					priceToPay += random.nextInt(8);
+					bid.addBidPoint(1, priceToPay);
+				} else {
+					//float priceToPay = 
+					//bid.addBidPoint(1, random.nextInt(bonus) + 1f); //bid up to the price
 				}
 			}
 			
