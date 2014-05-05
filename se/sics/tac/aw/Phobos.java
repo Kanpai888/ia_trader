@@ -203,7 +203,7 @@ public class Phobos extends AgentImpl {
 			int owned = agent.getOwn(auction); //number of tickets of this type owned
 			int alloc = agent.getAllocation(auction); //number of tickets of this type allocated
 			
-			log.fine("Entertainment " + auction + ": alloc = " + alloc + ", owned = " + owned);
+			//log.fine("Entertainment " + auction + ": alloc = " + alloc + ", owned = " + owned);
 			
 			Bid bid = new Bid(auction);
 			//sell all unallocated tickets for 101
@@ -238,7 +238,7 @@ public class Phobos extends AgentImpl {
 				float bonus = getAdditionalBonusForGivenTicket(new ETicket(type, day));
 				
 				//limit bonus to 103
-				if (bonus > 103) { bonus = 103; }
+				if (bonus > 101) { bonus = 101; }
 				
 				if (bonus > 50) {
 					//set the price to bid to a random number between bonus-50 and bonus-10
@@ -327,6 +327,11 @@ public class Phobos extends AgentImpl {
 					}
 				}
 			} 
+		}
+		
+		//update entertainment details
+		if (isInitialised && auctionCategory == TACAgent.CAT_ENTERTAINMENT) {
+			updateAllEntertainmentBonuses();
 		}
 
 		// We only initialise the allocation table after we get the first set of flight prices
@@ -430,6 +435,7 @@ public class Phobos extends AgentImpl {
 	 * The eticket list in clients
 	 */
 	private void updateAllEntertainmentBonuses() {
+		log.fine("Updating entertainment allocation information");
 		
 		//reset all arrays
 		for (Client client : clients) {
@@ -510,7 +516,7 @@ public class Phobos extends AgentImpl {
 				}
 			}
 		}
-		
+		log.fine("Finished updating entertainment allocation information");
 	}
 
 	/**
