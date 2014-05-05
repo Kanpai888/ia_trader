@@ -152,6 +152,8 @@ public class Phobos extends AgentImpl {
 
 	private boolean isInitialised = false;
 
+	private boolean[] closedAuctions;
+
 	private ArrayList<Client> clients;
 
 	protected void init(ArgEnumerator args) {
@@ -215,7 +217,7 @@ public class Phobos extends AgentImpl {
 
 			agent.submitBid(bid);
 		}
-		previousPrices[auction] = quote.getAskPrice();
+		// previousPrices[auction] = quote.getAskPrice();
 	}
 
 
@@ -238,6 +240,8 @@ public class Phobos extends AgentImpl {
 						auctionDelta[auction] = quote.getAskPrice() - previousPrices[auction];
 					}
 
+					previousPrices[auction] = quote.getAskPrice();
+
 					prices[auction] = quote.getAskPrice() + auctionDelta[auction] + 5;
 
 					// Update the estimates that are used in getUtility()
@@ -249,6 +253,11 @@ public class Phobos extends AgentImpl {
 					}
 
 					if (quote.isAuctionClosed()) {
+						// if (!closedAuctions[auction]) { // If this is the auction that has only just closed
+						// 	log.own("");
+						// 	assignAuctionItems(auction, agent.getOwn(auction));
+						// 	closedAuctions[auction] = true;
+						// }
 						estimates[TACAgent.getAuctionDay(auction) - 1] = 9999;
 					}else {
 						estimates[TACAgent.getAuctionDay(auction) - 1] = prices[auction];
@@ -256,34 +265,39 @@ public class Phobos extends AgentImpl {
 
 				}
 			} 
+			log.fine("All hotel auction estimates updated");
 			// Allow clients to revaluate which is the best trip before we submit new hotel bids.
 			// This should ensure that we only bid on hotel we want.
 			// Also if we are bidding too high on a hotel and would ruin the utility, this should 
 			// essentially handle that and cause the client to switch over.
-			for (Client c:clients){
-				c.refreshSelectedTrip(false);
-			}
-			for (int auction = 0, n = TACAgent.getAuctionNo(); auction < n; auction++) {
-				if (TACAgent.getAuctionCategory(auction) == TACAgent.CAT_HOTEL){
-					Quote quote = agent.getQuote(auction);
-					int alloc = agent.getAllocation(auction); // Allocation is number of items wanted from this auction
 
-					Bid hotelBid = new Bid(auction);
-					if(alloc > 0){
-						hotelBid.addBidPoint(alloc, prices[auction]);
-					}
+			// evaluateClientsFufillness();
+			
+			// for (Client c:clients){
+			// 	c.refreshSelectedTrip(false);
+			// }
 
-					// Compulsary bid at lowest value
-					int unwanted = quote.getHQW() - alloc;
-					if(unwanted > 0){
-						hotelBid.addBidPoint(unwanted, quote.getAskPrice() + 1);
-					}
-					if(alloc > 0 && !quote.isAuctionClosed()){
-						// Only bid, if you have something to bid for
-						agent.submitBid(hotelBid);
-					}
-				}
-			} 
+			// for (int auction = 0, n = TACAgent.getAuctionNo(); auction < n; auction++) {
+			// 	if (TACAgent.getAuctionCategory(auction) == TACAgent.CAT_HOTEL){
+			// 		Quote quote = agent.getQuote(auction);
+			// 		int alloc = agent.getAllocation(auction); // Allocation is number of items wanted from this auction
+
+			// 		Bid hotelBid = new Bid(auction);
+			// 		if(alloc > 0){
+			// 			hotelBid.addBidPoint(alloc, prices[auction]);
+			// 		}
+
+			// 		// Compulsary bid at lowest value
+			// 		int unwanted = quote.getHQW() - alloc;
+			// 		if(unwanted > 0){
+			// 			hotelBid.addBidPoint(unwanted, quote.getAskPrice() + 1);
+			// 		}
+			// 		if(alloc > 0 && !quote.isAuctionClosed()){
+			// 			// Only bid, if you have something to bid for
+			// 			agent.submitBid(hotelBid);
+			// 		}
+			// 	}
+			// } 
 		}
 
 		// We only initialise the allocation table after we get the first set of flight prices
@@ -342,6 +356,7 @@ public class Phobos extends AgentImpl {
 		currentFlightPrices = new float[TACAgent.getAuctionNo()]; // Reset flight prices array
 		previousPrices = new float[TACAgent.getAuctionNo()]; // Reset the previous prices array
 		auctionDelta  = new float[TACAgent.getAuctionNo()]; // Reset the auction delta
+		closedAuctions = new boolean[TACAgent.getAuctionNo()];
 
 		for (int i = 0; i < auctionDelta.length; ++i) {
 			auctionDelta[i] = 50;
@@ -360,7 +375,7 @@ public class Phobos extends AgentImpl {
 		// When a hotel auction closes, change the estimated price to 9999 to
 		// prevent other clients using a trip with it
 		if (TACAgent.getAuctionCategory(auction) == TACAgent.CAT_HOTEL) {
-			log.fine("**** Hotel closed called");
+			log.fine("**** Hotel closed called for auction: "+auction);
 			int day = TACAgent.getAuctionDay(auction) - 1; // Need to subtract 1 as array starts at index 0
 			if (TACAgent.getAuctionType(auction) == TACAgent.TYPE_GOOD_HOTEL) {
 				expensiveHotelEstimates[day] = 9999;
@@ -370,17 +385,43 @@ public class Phobos extends AgentImpl {
 
 			// Assign the hotels to clients that want them
 			assignAuctionItems(auction, agent.getOwn(auction));
+
+			evaluateClientsFufillness();
+
 			for (Client c : clients) {
-				c.refreshSelectedTrip(true);
+				c.refreshSelectedTrip(false);
 			}
 			//for entertainment
 		} else if (TACAgent.getAuctionCategory(auction) == TACAgent.CAT_ENTERTAINMENT) {
 			//update all entertainment bonuses
-			//      updateAllEntertainmentBonuses();
+			     updateAllEntertainmentBonuses();
 		}
-		evaluateClientsFufillness();
 
 		log.fine("*** Auction " + auction + " closed!");
+
+		for (int auctionNumber = 0, n = TACAgent.getAuctionNo(); auctionNumber < n; auctionNumber++) {
+			if (TACAgent.getAuctionCategory(auctionNumber) == TACAgent.CAT_HOTEL){
+				Quote quote = agent.getQuote(auctionNumber);
+				int alloc = agent.getAllocation(auctionNumber); // Allocation is number of items wanted from this auction
+
+				Bid hotelBid = new Bid(auctionNumber);
+				if(alloc > 0){
+					hotelBid.addBidPoint(alloc, prices[auctionNumber]);
+				}
+
+				// Compulsary bid at lowest value
+				int unwanted = quote.getHQW() - alloc;
+				if(unwanted > 0){
+					hotelBid.addBidPoint(unwanted, quote.getAskPrice() + 1);
+				}
+				if(alloc > 0 && !quote.isAuctionClosed()){
+					// Only bid, if you have something to bid for
+					agent.submitBid(hotelBid);
+				}
+			}
+		} 
+
+		log.fine("*** New bids submitted!");
 	}
 
 	/**
@@ -1135,7 +1176,7 @@ public class Phobos extends AgentImpl {
 			for (int i = inFlight; i < outFlight; ++i) {
 				// Need to get auction number to check if client owns hotel
 				auction = TACAgent.getAuctionFor(TACAgent.CAT_HOTEL, hotelType, i);
-				if( !assignedItems.contains(auction) && agent.getAllocation(auction) + 1 >= agent.getOwn(auction)){
+				if( !assignedItems.contains(auction) && agent.getAllocation(auction) >= agent.getOwn(auction)){
 					// Only apply hotel cost, if we need to buy a hotel
 					hotelCost += estimatedHotelPrices[i - 1];
 				}
